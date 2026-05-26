@@ -1,0 +1,32 @@
+## Interface: 120005
+## Title: PlayerDossier
+## Notes: Track players, ignore list, options – the complete player manager.
+## Author: Nightwalker559
+## Version: 1.0.1
+## IconTexture: Interface\AddOns\PlayerDossier\Media\icon
+## SavedVariables: PlayerDossierDB
+## OptionalDeps: ElvUI
+
+# ── Libraries
+libs/LibStub/LibStub.lua
+libs/CallbackHandler-1.0/CallbackHandler-1.0.lua
+libs/LibDataBroker-1.1/LibDataBroker-1.1.lua
+libs/LibDBIcon-1.0/LibDBIcon-1.0.lua
+
+# ── Core
+Core.lua
+
+# ── Locales
+Locales/Locale_enUS.lua
+Locales/Locale_deDE.lua
+
+# ── Addon
+Events.lua
+UI.lua
+Minimap.lua
+IgnoreList.lua
+Options.lua
+LFG.lua
+
+# ── Skins (last - frames müssen existieren)
+ElvUI_Skin.lua
