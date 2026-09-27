@@ -1,5 +1,16 @@
 # PlayerDossier – Changelog
 
+## [1.0.10] - 2026-09-27
+
+### Fixed
+- Ignore list chat filter cache wasn't cleared after "Remove All", so previously-ignored players could stay silently blocked in chat until reload.
+
+### Removed (cleanup, no behavior change)
+- Duplicate, out-of-date `Locale_deDE.lua`/`Locale_enUS.lua` at the addon root (not loaded by the .toc; real locales live in `Locales/`).
+- Unused `encounters` field on player entries (written but never read).
+- Unused compat aliases `PD:ToggleIgnoreWindow()` and `PD.RefreshIgnoreWindow`.
+- Triplicated row-pooling code in UI.lua/IgnoreList.lua/GroupHistory.lua, consolidated into `PD:NewRowPool()` (Core.lua).
+
 ## [1.0.9] - 2026-09-20
 
 ### New

@@ -211,16 +211,7 @@ end
 -- 4.  HISTORY PANEL (Tab 4)
 -- ================================================================
 
-local histRowPool = {}
-local function GetHistRow(parent)
-    for _, r in ipairs(histRowPool) do
-        if not r:IsShown() then r:SetParent(parent) r:Show() return r end
-    end
-    local r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    table.insert(histRowPool, r)
-    return r
-end
-local function HideAllHistRows() for _, r in ipairs(histRowPool) do r:Hide() end end
+local GetHistRow, HideAllHistRows = PD:NewRowPool()
 
 -- Column offsets (shared with Players/Ignore List tabs, PD.COL)
 local H_COL_NAME  = PD.COL.NAME

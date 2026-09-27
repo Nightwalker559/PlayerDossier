@@ -556,9 +556,8 @@ function PD:SelectTab(n)
     end
 end
 
--- Compat: andere Module rufen diese Funktionen auf
+-- Compat: andere Module rufen diese Funktion auf
 function PD:ToggleMainWindow()       PD:OpenOnTab(1) end
-function PD:ToggleIgnoreWindow()     PD:OpenOnTab(2) end  -- Ignore List  = Tab 2
 
 function PD:OpenOnTab(n)
     if not PD.mainFrame then return end
@@ -574,16 +573,7 @@ end
 -- 6.  PANEL 1: PLAYERS
 -- ================================================================
 
-local rowPool = {}
-local function GetRow(parent)
-    for _, r in ipairs(rowPool) do
-        if not r:IsShown() then r:SetParent(parent) r:Show() return r end
-    end
-    local r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    table.insert(rowPool, r)
-    return r
-end
-local function HideAllRows() for _, r in ipairs(rowPool) do r:Hide() end end
+local GetRow, HideAllRows = PD:NewRowPool()
 
 -- Spaltenoffsets Players-Panel (gemeinsam mit Ignorierliste/Verlauf, PD.COL)
 local PL_COL_MOOD  = 4              -- Emoji (nur hier)
