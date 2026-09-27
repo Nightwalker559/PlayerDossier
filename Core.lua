@@ -113,6 +113,27 @@ function PD:BuildColumnHeaders(panel, heads, rightPad)
 end
 
 -- ----------------------------------------------------------------
+-- Frame-Pooling für Zeilen in Players-/Ignorier-/Verlauf-Panel.
+-- Jedes Panel hatte vorher seine eigene identische Pool-Implementierung
+-- (rowPool/GetRow/HideAllRows) - jetzt eine gemeinsame Fabrikfunktion.
+-- ----------------------------------------------------------------
+function PD:NewRowPool()
+    local pool = {}
+    local function GetRow(parent)
+        for _, r in ipairs(pool) do
+            if not r:IsShown() then r:SetParent(parent) r:Show() return r end
+        end
+        local r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        table.insert(pool, r)
+        return r
+    end
+    local function HideAll()
+        for _, r in ipairs(pool) do r:Hide() end
+    end
+    return GetRow, HideAll
+end
+
+-- ----------------------------------------------------------------
 -- DB-Initialisierung
 -- ----------------------------------------------------------------
 
@@ -148,8 +169,7 @@ function PD:SetEntry(name, realm, note, mood, class, guid)
         mood      = mood  or "neutral",
         class     = class or (old and old.class) or "UNKNOWN",
         guid      = guid  or (old and old.guid)  or "",
-        timestamp  = (old and old.timestamp) or time(),
-        encounters = (old and old.encounters or 0) + (old and 0 or 1),
+        timestamp = (old and old.timestamp) or time(),
     }
 end
 

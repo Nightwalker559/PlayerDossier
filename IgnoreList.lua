@@ -157,6 +157,7 @@ function PD:IL_Sync()
             local iname = C_FriendList.GetIgnoreName(i)
             if iname then C_FriendList.DelIgnore(iname) end
         end
+        InvalidateNameCache()
         return
     end
 
@@ -396,18 +397,7 @@ end
 -- 6.  IGNORE-FENSTER
 -- ================================================================
 
-local ilRowPool = {}
-local function GetILRow(parent)
-    for _, r in ipairs(ilRowPool) do
-        if not r:IsShown() then r:SetParent(parent) r:Show() return r end
-    end
-    local r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    table.insert(ilRowPool, r)
-    return r
-end
-local function HideAllILRows()
-    for _, r in ipairs(ilRowPool) do r:Hide() end
-end
+local GetILRow, HideAllILRows = PD:NewRowPool()
 
 -- Spaltenoffsets (gemeinsam mit Spieler/Verlauf, PD.COL)
 local IL_COL_NAME   = PD.COL.NAME
@@ -583,9 +573,6 @@ function PD:RefreshIgnorePanel()
     end
     content:SetHeight(math.abs(yOff) + IL_ROW_PAD)
 end
-
--- Compat aliases
-PD.RefreshIgnoreWindow = PD.RefreshIgnorePanel
 
 -- ================================================================
 -- 7.  INIT-HOOK + SLASH-COMMANDS
