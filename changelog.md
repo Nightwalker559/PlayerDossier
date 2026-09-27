@@ -1,16 +1,5 @@
 # PlayerDossier – Changelog
 
-## [1.0.10] - 2026-09-27
-
-### Fixed
-- Ignore list chat filter cache wasn't cleared after "Remove All", so previously-ignored players could stay silently blocked in chat until reload.
-
-### Removed (cleanup, no behavior change)
-- Duplicate, out-of-date `Locale_deDE.lua`/`Locale_enUS.lua` at the addon root (not loaded by the .toc; real locales live in `Locales/`).
-- Unused `encounters` field on player entries (written but never read).
-- Unused compat aliases `PD:ToggleIgnoreWindow()` and `PD.RefreshIgnoreWindow`.
-- Triplicated row-pooling code in UI.lua/IgnoreList.lua/GroupHistory.lua, consolidated into `PD:NewRowPool()` (Core.lua).
-
 ## [1.0.9] - 2026-09-20
 
 ### New
@@ -27,6 +16,13 @@
 - Ignore List right-click menu: "Edit" opened the Player Dossier's note dialog (wrong title "Note – Name", mood buttons) instead of editing the ignore entry's own reason. New dedicated "Edit reason" option edits the actual ignore-list reason text; the dossier link is now separately labeled "Edit note in Player Dossier" / "Add to Player Dossier".
 - Player/Ignore List/Group History tab headers now share one helper (PD:BuildColumnHeaders) so all three look identical and each column stretches to full width instead of relying on unconstrained text.
 - Column positions (Name/Server/Role/Since/last column) are now shared constants (PD.COL) across Players, Ignore List and Group History, so all three tabs line up identically instead of each tab using its own cramped layout.
+- Ignore list chat filter cache wasn't cleared after "Remove All", so previously-ignored players could stay silently blocked in chat until reload.
+
+### Removed (cleanup, no behavior change)
+- Duplicate, out-of-date `Locale_deDE.lua`/`Locale_enUS.lua` at the addon root (not loaded by the .toc; real locales live in `Locales/`).
+- Unused `encounters` field on player entries (written but never read).
+- Unused compat aliases `PD:ToggleIgnoreWindow()` and `PD.RefreshIgnoreWindow`.
+- Triplicated row-pooling code in UI.lua/IgnoreList.lua/GroupHistory.lua, consolidated into `PD:NewRowPool()` (Core.lua).
 
 ## [1.0.8] - 2026-09-18
 
