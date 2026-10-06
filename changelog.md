@@ -18,6 +18,7 @@
 - Whisper from the Players tab to a player on a realm with a space in its name (e.g. "Tarren Mill") produced an invalid target.
 - Raid roster scans no longer treat the player themselves as a group member (could cause a bogus reunion notice for your own dossier entry).
 - Options panel subtitle showed "Chat Messages" instead of "Options".
+- Realms with a space in their name (e.g. "Tarren Mill") were stored differently from how WoW reports them ("TarrenMill"), so dossier/ignore/history entries of players on such realms could be missed. All realm names are now stored without spaces; existing entries are migrated automatically on first load.
 
 ### Internal cleanup (no behavior change)
 - New `Widgets.lua` with the shared UI building blocks; the Players, Ignore List and History panels now use the same helpers for list setup, rows, labels, empty state and subtitle instead of three copies.
