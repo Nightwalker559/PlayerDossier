@@ -3,33 +3,30 @@
 ## [1.1.0] - 2026-10-06
 
 ### New
-- LFG tooltip: the mood icon (good/neutral/bad) now appears directly next to the player's name in the Leader and Members lines of the group tooltip, not only in the PlayerDossier block at the bottom.
+- LFG tooltip: mood icon next to known players in the Leader and Members lines.
 
 ### Changed
-- The chat filter now also covers whispers, guild/officer chat and the party/raid/instance *leader* and raid warning channels (previously only say/yell/emote/channels/raid/party/instance).
-- Mood colors are now identical in chat notices and in the UI (single shared definition).
+- Chat filter also covers whispers, guild/officer chat and the leader/warning channels (party, raid, instance).
+- Chat filter: a sender with a realm only matches the exact Name-Realm; same-named players on other realms are no longer blocked.
+- Mood colors are the same in chat and UI.
 
 ### Fixed
-- LFG tooltip: dossier/ignore entries of players on other realms were not recognized when the group's member list gave the name without a realm. Names without a realm are now also matched by name only.
-- Auto-decline of trade requests did nothing (it hid `TradeFrame`, which isn't shown yet at that point). It now cancels the request and closes the trade popup.
-- Chat filter and auto-decline no longer risk a Lua error when WoW 12.x hands out a secret sender name (e.g. inside instances); such messages are simply left alone.
-- The "Ignored player is in your group" warning could print several times in a row (once per ignore-list update, e.g. right after login). Bursts are now collapsed into one warning. The message is now localized (it was hardcoded English).
-- Every note save re-ran the addon's init chain and scheduled another ignore-list sync 2 seconds later. Init now runs exactly once.
-- Whisper from the Players tab to a player on a realm with a space in its name (e.g. "Tarren Mill") produced an invalid target.
-- Raid roster scans no longer treat the player themselves as a group member (could cause a bogus reunion notice for your own dossier entry).
-- Options panel subtitle showed "Chat Messages" instead of "Options".
-- Chat filter: a sender WITH a realm now only matches the exact Name-Realm on your ignore list. Before, the name-only fallback also blocked same-named players from other realms. The fallback still applies when the sender comes without a realm.
-- Realms with a space in their name (e.g. "Tarren Mill") were stored differently from how WoW reports them ("TarrenMill"), so dossier/ignore/history entries of players on such realms could be missed. All realm names are now stored without spaces; existing entries are migrated automatically on first load.
+- Realms with a space in the name ("Tarren Mill") are now stored as WoW reports them ("TarrenMill"); existing entries are migrated automatically.
+- LFG tooltip: players on other realms are now found when the member list has no realm.
+- Auto-decline of trade requests now actually works.
+- No Lua errors from secret sender names in the chat filter and auto-decline (WoW 12.x).
+- "Ignored player is in your group" warning prints once instead of repeatedly, and is now localized.
+- Saving a note no longer triggers an extra ignore-list sync.
+- Whispering players on realms with a space in the name works.
+- No bogus reunion notice for yourself in raids.
+- Options tab subtitle read "Chat Messages" instead of "Options".
 
-### Internal cleanup (no behavior change)
-- New `Widgets.lua` with the shared UI building blocks; the Players, Ignore List and History panels now use the same helpers for list setup, rows, labels, empty state and subtitle instead of three copies.
-- Single registries for init/build callbacks (`PD:OnInit`, `PD:OnBuildUI`) and slash subcommands (`PD.commands`) replace the chained wrappers around `PD.Init`, `PD.BuildUI` and `SlashCmdList`.
-- Shared helpers for name/realm parsing, the group member loop, the Mythic+ check, mood data and secret-value checks replace many duplicated snippets.
-- The chat filter moved from Options.lua into IgnoreList.lua, the native-ignore import into `PD:IL_ImportNative()`, and the ignore/history/options DB tables are created once in `PD:EnsureDB()`.
-- Removed dead code (legacy link format, unused options key `minimapButton`, duplicate "clear players" confirmation and its locale keys, unused count helpers, redundant build flags).
-- ElvUI skin: one skinning path per tab instead of two overlapping ones.
-- All code comments are now in English.
-- Module state (active tab, copy popup, slot warning) lives in locals instead of the shared addon table; whisper and reunion/leave notices use shared realm helpers.
+### Internal
+- New `Widgets.lua` with shared UI helpers used by the Players, Ignore List and History tabs.
+- Init, UI-build and slash commands use registries (`PD:OnInit`, `PD:OnBuildUI`, `PD.commands`) instead of wrapped functions.
+- Shared helpers for realm names, group scans, Mythic+ check, moods and secret values.
+- Chat filter and native ignore import moved into IgnoreList.lua.
+- Dead code and unused locale keys removed, ElvUI skin simplified, all comments in English.
 
 ## [1.0.9] - 2026-09-20
 
