@@ -9,6 +9,7 @@
 - Chat filter also covers whispers, guild/officer chat and the leader/warning channels (party, raid, instance).
 - Chat filter: a sender with a realm only matches the exact Name-Realm; same-named players on other realms are no longer blocked.
 - Mood colors are the same in chat and UI.
+- First tab renamed from "Players" to "Dossier".
 - Quieter chat: no more login message and no confirmations for saved notes, "show minimap button" or "remove all". The "ignore slots full" warning now only appears when you ignore someone, not at login.
 - Removed the M+ "has left the group" / "anyone worth remembering?" chat prompts; everyone is in the History tab anyway.
 
@@ -22,6 +23,7 @@
 - Whispering players on realms with a space in the name works.
 - No bogus reunion notice for yourself in raids.
 - Options tab subtitle read "Chat Messages" instead of "Options".
+- Window subtitle showed the wrong count when a note was saved from another tab (e.g. History).
 
 ### Internal
 - New `Widgets.lua` with shared UI helpers used by the Players, Ignore List and History tabs.

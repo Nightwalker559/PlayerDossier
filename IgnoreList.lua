@@ -390,7 +390,7 @@ function PD:BuildIgnorePanel(panel)
 end
 
 local function FillIgnoreRow(row, entry)
-    -- Ignore list: always white names (class colors only in the Players tab)
+    -- Ignore list: always white names (class colors only in the Dossier tab)
     PD:RowLabel(row, "nameLabel", COL_NAME, COL_REALM, nil, 1, 1, 1):SetText(entry.name or "?")
     PD:RowLabel(row, "realmLabel", COL_REALM, COL_LISTED, nil, 0.78, 0.78, 0.78)
         :SetText(entry.realm or PD.GetMyRealm())
@@ -439,7 +439,7 @@ function PD:RefreshIgnorePanel()
     table.sort(list, function(a, b) return (a.timestamp or 0) > (b.timestamp or 0) end)
 
     local count = #list
-    PD:SetSubtitle(PD.CountText(count, "SUB_NO_IGNORED", "SUB_1_IGNORED", "SUB_N_IGNORED"))
+    PD:SetSubtitle(PD.CountText(count, "SUB_NO_IGNORED", "SUB_1_IGNORED", "SUB_N_IGNORED"), panel)
 
     if count == 0 then
         PD:ShowEmptyLabel(panel, content, L["IL_EMPTY"], 40, 100)

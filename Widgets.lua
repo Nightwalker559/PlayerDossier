@@ -15,7 +15,7 @@ local L  = PD.L
 -- Players/Ignore List tabs but "Grouped" in History.
 -- ----------------------------------------------------------------
 PD.COL = {
-    NAME  = 58,   -- leaves room for the 48px mood icon in the Players tab
+    NAME  = 58,   -- leaves room for the 48px mood icon in the Dossier tab
     REALM = 220,
     ROLE  = 330,  -- not used by the Ignore List
     MODE  = 370,  -- History only (only ever "M+<level>" - ScanGroup() filters on ^M%+)
@@ -206,8 +206,12 @@ function PD.CountText(count, noneKey, oneKey, manyKey)
     return string.format(L[manyKey], count)
 end
 
-function PD:SetSubtitle(text)
-    if PD.mainFrame then PD.mainFrame.subtitle:SetText(text) end
+-- Sets the window subtitle; with `panel` only if that panel is the visible one
+-- (a refresh can be triggered while another tab is open)
+function PD:SetSubtitle(text, panel)
+    if PD.mainFrame and (not panel or panel:IsShown()) then
+        PD.mainFrame.subtitle:SetText(text)
+    end
 end
 
 -- ----------------------------------------------------------------

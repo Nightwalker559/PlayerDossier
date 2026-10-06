@@ -11,7 +11,7 @@ L["entries"]             = "entries"
 
 -- ── Slash commands ────────────────────────────────────────────
 L["SLASH_HELP_HEADER"]   = "|cff9B82F3PlayerDossier|r commands:"
-L["SLASH_HELP_PD"]       = "  |cffffff00/pd|r              – open the dossier (Players tab)"
+L["SLASH_HELP_PD"]       = "  |cffffff00/pd|r              – open the dossier (Dossier tab)"
 L["SLASH_HELP_IGNORE"]   = "  |cffffff00/pd ignore|r       – open Ignore List tab"
 L["SLASH_HELP_MINIMAP"]  = "  |cffffff00/pd minimap|r      – toggle minimap button"
 L["SLASH_HELP_CLEAR"]    = "  |cffffff00/pd clear|r        – delete ALL entries"
@@ -19,7 +19,7 @@ L["SLASH_HELP_HELP"]     = "  |cffffff00/pd help|r         – show this help"
 L["SLASH_UNKNOWN"]       = "|cff9B82F3PlayerDossier:|r Unknown command. Type |cffffff00/pd help|r."
 
 -- ── Tabs ─────────────────────────────────────────────────────
-L["TAB_PLAYERS"]         = "Players"
+L["TAB_DOSSIER"]         = "Dossier"
 L["TAB_IGNORE"]          = "Ignore List"
 
 -- ── Subtitles ─────────────────────────────────────────────────

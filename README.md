@@ -6,7 +6,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 
 ## Features
 
-### Players (the "dossier")
+### Dossier
 - Add any player with a **note** (up to 60 characters) and a **mood**: Good, Neutral or Bad.
 - Add players via right-click on a unit frame, a chat name, the group frames or the social menus.
 - The list is sorted by mood (Good → Neutral → Bad), then by name, and shows class color, server, role, time since you added them and your note.
@@ -45,7 +45,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 
 | Command | Action |
 | --- | --- |
-| `/pd` | Open the dossier (Players tab) |
+| `/pd` | Open the dossier (Dossier tab) |
 | `/pd ignore` | Open the Ignore List tab |
 | `/pd minimap` | Toggle the minimap button |
 | `/pd clear` | Delete **all** dossier entries (asks for confirmation) |
@@ -53,7 +53,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 
 `/playerdossier` and `/dossier` work as aliases for `/pd`.
 
-The window has four tabs: **Players**, **Ignore List**, **History** and **Options**.
+The window has four tabs: **Dossier**, **Ignore List**, **History** and **Options**.
 
 ## Options
 

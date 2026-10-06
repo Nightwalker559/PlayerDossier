@@ -302,7 +302,7 @@ local activeTab   -- index of the selected tab
 
 -- Tab definition: label key, panel builder (lazy, optional), refresh function
 local TABS = {
-    { label = "TAB_PLAYERS", refresh = "RefreshMainWindow" },
+    { label = "TAB_DOSSIER", refresh = "RefreshMainWindow" },
     { label = "TAB_IGNORE",  build = "BuildIgnorePanel",  refresh = "RefreshIgnorePanel" },
     { label = "TAB_HISTORY", build = "BuildHistoryPanel", refresh = "RefreshHistoryPanel" },
     { label = "TAB_OPTIONS", build = "BuildOptionsPanel", refresh = "RefreshOptionsPanel" },
@@ -428,7 +428,7 @@ function PD:ToggleMainWindow() PD:OpenOnTab(1) end
 
 local GetRow, HideAllRows = PD:NewRowPool()
 
-local COL_MOOD  = 4    -- mood icon (Players tab only)
+local COL_MOOD  = 4    -- mood icon (Dossier tab only)
 local COL_NAME  = PD.COL.NAME
 local COL_REALM = PD.COL.REALM
 local COL_ROLE  = PD.COL.ROLE
@@ -532,7 +532,7 @@ function PD:RefreshMainWindow()
     end)
 
     local count = #list
-    PD:SetSubtitle(PD.CountText(count, "SUB_NO_ENTRIES", "SUB_1_ENTRY", "SUB_N_ENTRIES"))
+    PD:SetSubtitle(PD.CountText(count, "SUB_NO_ENTRIES", "SUB_1_ENTRY", "SUB_N_ENTRIES"), p1)
 
     if count == 0 then
         PD:ShowEmptyLabel(p1, content, L["EMPTY_PLAYERS"], 60, 160)

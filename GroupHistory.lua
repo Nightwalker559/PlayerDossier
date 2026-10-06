@@ -163,7 +163,7 @@ end)
 -- 3.  HISTORY PANEL
 -- ================================================================
 
--- Role letter shown in the Role column (also used by the Players tab)
+-- Role letter shown in the Role column (also used by the Dossier tab)
 local ROLE_KEYS = { TANK = "HIST_ROLE_TANK", HEALER = "HIST_ROLE_HEALER", DAMAGER = "HIST_ROLE_DAMAGER" }
 
 function PD:GH_RoleText(role)
@@ -251,7 +251,7 @@ function PD:RefreshHistoryPanel()
     table.sort(list, function(a, b) return (a.lastSeen or 0) > (b.lastSeen or 0) end)
 
     local count = #list
-    PD:SetSubtitle(PD.CountText(count, "SUB_NO_HISTORY", "SUB_1_HISTORY", "SUB_N_HISTORY"))
+    PD:SetSubtitle(PD.CountText(count, "SUB_NO_HISTORY", "SUB_1_HISTORY", "SUB_N_HISTORY"), panel)
 
     if count == 0 then
         PD:ShowEmptyLabel(panel, content, L["HIST_EMPTY"], 40, 100)
