@@ -16,17 +16,28 @@ local MEDIA = "Interface/AddOns/PlayerDossier/Media/"
 -- Realm / name helpers
 -- ----------------------------------------------------------------
 
-local myRealm  -- cached on first use
+-- All realm names are stored in their normalized form without spaces
+-- ("TarrenMill"), which is what UnitName(), chat senders and the native
+-- ignore list use. GetRealmName() returns "Tarren Mill" instead.
+local myRealm  -- cached once WoW reports it
 
 local function GetMyRealm()
-    if not myRealm then myRealm = GetRealmName() end
-    return myRealm
+    if myRealm then return myRealm end
+    local normalized = GetNormalizedRealmName and GetNormalizedRealmName()
+    if normalized and normalized ~= "" then
+        myRealm = normalized
+        return myRealm
+    end
+    -- Not available yet (very early login): derive it, but don't cache
+    return (((GetRealmName() or ""):gsub("%s", "")))
 end
 PD.GetMyRealm = GetMyRealm
 
--- Empty/missing realm means "same realm as the player"
+-- Normalizes a realm name; empty/missing means "same realm as the player"
 function PD.NormRealm(realm)
-    if type(realm) == "string" and realm ~= "" then return realm end
+    if type(realm) == "string" and realm ~= "" then
+        return (realm:gsub("%s", ""))
+    end
     return GetMyRealm()
 end
 
@@ -42,8 +53,9 @@ function PD:GetKey(name, realm)
     return name .. "-" .. PD.NormRealm(realm)
 end
 
--- Target string for WoW's native ignore list (realm only for foreign realms)
-function PD.NativeTarget(name, realm)
+-- "Name" for the player's own realm, "Name-Realm" otherwise - the form WoW
+-- expects for /w and the native ignore list
+function PD.TargetName(name, realm)
     realm = PD.NormRealm(realm)
     return (realm == GetMyRealm()) and name or (name .. "-" .. realm)
 end
@@ -197,9 +209,44 @@ function PD:EnsureDB()
     db.opt        = db.opt        or {}
 end
 
+-- Realm format 2: realm names without spaces. Re-keys the entries of the
+-- players, ignore list and history tables that were stored with the
+-- spaced name from GetRealmName() ("Name-Tarren Mill" → "Name-TarrenMill").
+-- If both variants exist, the one already stored under the new key wins.
+local REALM_FORMAT = 2
+
+local function MigrateRealmKeys(tbl)
+    local moves = {}
+    for key, e in pairs(tbl) do
+        if e.name then
+            local realm  = PD.NormRealm(e.realm)
+            local newKey = e.name .. "-" .. realm
+            if newKey ~= key then moves[#moves + 1] = { key, newKey, e, realm } end
+        end
+    end
+    for _, m in ipairs(moves) do
+        local key, newKey, e, realm = m[1], m[2], m[3], m[4]
+        tbl[key] = nil
+        if not tbl[newKey] then
+            e.realm = realm
+            tbl[newKey] = e
+        end
+    end
+end
+
+local function MigrateDB()
+    local db = PlayerDossierDB
+    if (db.realmFormat or 1) >= REALM_FORMAT then return end
+    MigrateRealmKeys(db.players)
+    MigrateRealmKeys(db.ignoreList)
+    MigrateRealmKeys(db.history)
+    db.realmFormat = REALM_FORMAT
+end
+
 -- Called once from ADDON_LOADED
 function PD:Init()
     PD:EnsureDB()
+    MigrateDB()
     for _, fn in ipairs(initCallbacks) do fn() end
 end
 

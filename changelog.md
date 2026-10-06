@@ -18,6 +18,8 @@
 - Whisper from the Players tab to a player on a realm with a space in its name (e.g. "Tarren Mill") produced an invalid target.
 - Raid roster scans no longer treat the player themselves as a group member (could cause a bogus reunion notice for your own dossier entry).
 - Options panel subtitle showed "Chat Messages" instead of "Options".
+- Chat filter: a sender WITH a realm now only matches the exact Name-Realm on your ignore list. Before, the name-only fallback also blocked same-named players from other realms. The fallback still applies when the sender comes without a realm.
+- Realms with a space in their name (e.g. "Tarren Mill") were stored differently from how WoW reports them ("TarrenMill"), so dossier/ignore/history entries of players on such realms could be missed. All realm names are now stored without spaces; existing entries are migrated automatically on first load.
 
 ### Internal cleanup (no behavior change)
 - New `Widgets.lua` with the shared UI building blocks; the Players, Ignore List and History panels now use the same helpers for list setup, rows, labels, empty state and subtitle instead of three copies.
@@ -27,6 +29,7 @@
 - Removed dead code (legacy link format, unused options key `minimapButton`, duplicate "clear players" confirmation and its locale keys, unused count helpers, redundant build flags).
 - ElvUI skin: one skinning path per tab instead of two overlapping ones.
 - All code comments are now in English.
+- Module state (active tab, copy popup, slot warning) lives in locals instead of the shared addon table; whisper and reunion/leave notices use shared realm helpers.
 
 ## [1.0.9] - 2026-09-20
 

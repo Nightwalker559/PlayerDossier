@@ -21,6 +21,7 @@
 local PD         = PlayerDossier
 local L          = PD.L
 local MAX_NATIVE = 50   -- WoW's native ignore slots
+local slotWarningShown = false   -- "all slots full" warning shown this session
 
 -- ================================================================
 -- 1.  DB LAYER
@@ -90,7 +91,7 @@ function PD:IL_Remove(name, realm)
     if not entry then return end
 
     if entry.native then
-        C_FriendList.DelIgnore(PD.NativeTarget(name, realm))
+        C_FriendList.DelIgnore(PD.TargetName(name, realm))
     end
 
     PlayerDossierDB.ignoreList[key] = nil
@@ -139,7 +140,7 @@ function PD:IL_Sync()
     if not PD:OPT_Get("syncNativeIgnore") then
         for _, entry in pairs(addonList) do
             if entry.native then
-                C_FriendList.DelIgnore(PD.NativeTarget(entry.name, entry.realm))
+                C_FriendList.DelIgnore(PD.TargetName(entry.name, entry.realm))
                 entry.native = false
             end
         end
@@ -176,15 +177,15 @@ function PD:IL_Sync()
     local canAdd = math.max(0, MAX_NATIVE - numIgnores)
 
     -- Warn once per session when all native slots are taken
-    if numIgnores >= MAX_NATIVE and not PD._ilSlotWarnShown then
-        PD._ilSlotWarnShown = true
+    if numIgnores >= MAX_NATIVE and not slotWarningShown then
+        slotWarningShown = true
         if PD:OPT_Get("chatMessages") then
             print(L["IL_SLOTS_FULL"])
         end
     end
 
     for _, entry in ipairs(list) do
-        local target = PD.NativeTarget(entry.name, entry.realm)
+        local target = PD.TargetName(entry.name, entry.realm)
         local tLow   = target:lower()
         if nativeSet[tLow] then
             entry.native = true
@@ -202,13 +203,17 @@ end
 -- 3.  CHAT FILTER  (overflow protection for > 50 ignored players)
 -- ================================================================
 
+-- realm = nil/"" means the sender came without a realm suffix
 function PD:IL_ShouldFilterSender(name, realm)
     if not PlayerDossierDB or not PlayerDossierDB.ignoreList then return false end
 
-    -- Exact match (name + realm)
+    -- Exact match (name + realm; no realm = the player's own realm)
     if PlayerDossierDB.ignoreList[PD:GetKey(name, realm)] then return true end
 
-    -- Fallback: name only (case-insensitive)
+    -- A sender WITH a realm that doesn't match exactly is someone else
+    -- (same name, other realm). Only when the realm is unknown, fall back
+    -- to the name (case-insensitive).
+    if realm and realm ~= "" then return false end
     return GetNameCache()[name:lower()] or false
 end
 
