@@ -213,8 +213,10 @@ end
 -- ----------------------------------------------------------------
 -- Copy popup (Ctrl+C), created lazily
 -- ----------------------------------------------------------------
+local copyPopup
+
 function PD:ShowCopyPopup(text)
-    if not PD._copyPopup then
+    if not copyPopup then
         local f = CreateFrame("Frame", "PDCopyPopup", UIParent, "BasicFrameTemplateWithInset")
         f:SetSize(320, 70)
         f:SetFrameStrata("TOOLTIP")
@@ -238,9 +240,9 @@ function PD:ShowCopyPopup(text)
             end
         end)
         f.editBox = eb
-        PD._copyPopup = f
+        copyPopup = f
     end
-    local f = PD._copyPopup
+    local f = copyPopup
     f:SetPoint("CENTER")
     f.editBox:SetText(text)
     f.editBox:HighlightText()

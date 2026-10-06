@@ -293,17 +293,15 @@ end
 -- ================================================================
 
 local function WhisperPlayer(name, realm)
-    -- Compare realms ignoring case and spaces ("Tarren Mill" = "TarrenMill")
-    local entryRealm = (realm or ""):gsub("%s", "")
-    local crossRealm = entryRealm ~= "" and entryRealm:lower() ~= PD.GetMyRealm():gsub("%s", ""):lower()
-
     -- ChatFrame_OpenChat is more reliable than poking the edit box directly
-    ChatFrame_OpenChat("/w " .. (crossRealm and (name .. "-" .. entryRealm) or name) .. " ", DEFAULT_CHAT_FRAME)
+    ChatFrame_OpenChat("/w " .. PD.TargetName(name, realm) .. " ", DEFAULT_CHAT_FRAME)
 end
 
 -- ================================================================
 -- 5.  MAIN WINDOW WITH TABS
 -- ================================================================
+
+local activeTab   -- index of the selected tab
 
 -- Tab definition: label key, panel builder (lazy, optional), refresh function
 local TABS = {
@@ -385,7 +383,7 @@ function PD:BuildUI()
     PD:BuildPlayersPanel(PD.panel1)
     PD:BuildNoteDialog()
 
-    f:SetScript("OnShow", function() PD:SelectTab(PD._activeTab or 1) end)
+    f:SetScript("OnShow", function() PD:SelectTab(activeTab or 1) end)
 
     PD:RunBuildCallbacks()
 end
@@ -393,7 +391,7 @@ end
 function PD:SelectTab(n)
     local f = PD.mainFrame
     if not f then return end
-    PD._activeTab = n
+    activeTab = n
     PanelTemplates_SetTab(f, n)
 
     -- Keep the tab text centered (PanelTabButtonTemplate shifts it when selected)
@@ -417,7 +415,7 @@ end
 
 function PD:OpenOnTab(n)
     if not PD.mainFrame then return end
-    if PD.mainFrame:IsShown() and PD._activeTab == n then
+    if PD.mainFrame:IsShown() and activeTab == n then
         PD.mainFrame:Hide()
     else
         PD.mainFrame:Show()

@@ -53,8 +53,9 @@ function PD:GetKey(name, realm)
     return name .. "-" .. PD.NormRealm(realm)
 end
 
--- Target string for WoW's native ignore list (realm only for foreign realms)
-function PD.NativeTarget(name, realm)
+-- "Name" for the player's own realm, "Name-Realm" otherwise - the form WoW
+-- expects for /w and the native ignore list
+function PD.TargetName(name, realm)
     realm = PD.NormRealm(realm)
     return (realm == GetMyRealm()) and name or (name .. "-" .. realm)
 end

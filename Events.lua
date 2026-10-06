@@ -14,14 +14,19 @@ local ADDON_VERSION = C_AddOns.GetAddOnMetadata("PlayerDossier", "Version") or "
 -- Reunion notice
 -- ----------------------------------------------------------------
 
+-- Grey "-Realm" suffix for players from other realms
+local function RealmSuffix(realm)
+    if realm and realm ~= PD.GetMyRealm() then
+        return "|cff888888-" .. realm .. "|r"
+    end
+    return ""
+end
+
 function PD:ShowReunionNotice(entry)
     if not PD:OPT_Get("chatMessages") then return end
     local mood = PD:GetMood(entry.mood)
 
-    local nameStr = entry.name or "?"
-    if entry.realm and entry.realm ~= PD.GetMyRealm() then
-        nameStr = nameStr .. "|cff888888-" .. entry.realm .. "|r"
-    end
+    local nameStr = (entry.name or "?") .. RealmSuffix(entry.realm)
 
     local line = string.format("|cff9B82F3[PlayerDossier]|r %s |cff%s%s|r",
         PD:MoodIcon(entry.mood), mood.hex, nameStr)
@@ -45,10 +50,7 @@ local function ColoredName(name, realm, class)
     else
         nameStr = "|cffdddddd" .. name .. "|r"
     end
-    if realm and realm ~= PD.GetMyRealm() then
-        nameStr = nameStr .. "|cff888888-" .. realm .. "|r"
-    end
-    return nameStr
+    return nameStr .. RealmSuffix(realm)
 end
 
 local function MakeRememberLink(name, realm, class, linkText)
