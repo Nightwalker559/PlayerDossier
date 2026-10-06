@@ -114,11 +114,7 @@ L["IL_IGNORED_HINT"]    = "Ignored"
 L["BTN_COPY_NAME"]      = "Copy Name-Realm"
 L["COPY_POPUP_TITLE"]   = "Copy – Ctrl+C"
 
--- ── Group leave / kick ────────────────────────────────────────
-L["LINK_REMEMBER"]  = "Add to Dossier"
-L["LINK_EDIT"]      = "Edit Note"
-L["LINK_LEFT_GROUP"]= "has left the group"
-L["KICKED_MSG"]     = "You left the group. Remember anyone?"
+-- ── Help ────────────────────────────────────────
 L["SLASH_HELP_ADD"]     = "  Right-click any player or chat name to add them to the dossier."
 
 -- ── Class colors option ───────────────────────────────────────

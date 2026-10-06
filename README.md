@@ -12,7 +12,6 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 - The list is sorted by mood (Good → Neutral → Bad), then by name, and shows class color, server, role, time since you added them and your note.
 - **Copy Name-Realm** from the context menu, ready to paste into raider.io or WarcraftLogs.
 - Get a **reunion notice** in chat when a tracked player joins your group.
-- Clickable chat prompts when someone leaves or is kicked from your Mythic+ group ("Anyone worth remembering?") so you can add them on the spot.
 
 ### Ignore List — no 50-slot limit
 - Account-wide ignore list with an optional reason per player.

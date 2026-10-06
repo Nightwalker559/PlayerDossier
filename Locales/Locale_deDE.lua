@@ -116,11 +116,7 @@ L["IL_IGNORED_HINT"]    = "Ignoriert"
 L["BTN_COPY_NAME"]      = "Name-Server kopieren"
 L["COPY_POPUP_TITLE"]   = "Kopieren – Strg+C"
 
--- ── Group leave / kick ───────────────────────────────────
-L["LINK_REMEMBER"]  = "Zum Dossier"
-L["LINK_EDIT"]      = "Bearbeiten"
-L["LINK_LEFT_GROUP"]= "hat die Gruppe verlassen"
-L["KICKED_MSG"]     = "Du hast die Gruppe verlassen. Jemanden merken?"
+-- ── Help ───────────────────────────────────
 L["SLASH_HELP_ADD"]     = "  Rechtsklick auf einen Spieler oder Chat-Namen um ihn hinzuzufügen."
 
 -- ── Class colors option ──────────────────────────────────────
