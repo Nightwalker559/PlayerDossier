@@ -21,9 +21,8 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 - **Import** your existing WoW ignore list with one click.
 
 ### Group Finder (LFG)
-- **Inline warning:** a group whose leader or member is on your ignore list is marked red with a warning icon directly in the search results, no hover needed.
-- **Tooltip:** hover a group to see the mood icon right next to the names of known players in the Leader and Members lines, plus a PlayerDossier block with your notes. Works with players from other realms and alongside Raider.IO tooltips.
-- **Hide groups** that contain ignored players (optional).
+- **Inline warning:** a group whose leader or member is on your ignore list is marked red with "!IGNORED" directly in the search results, no hover needed.
+- **Tooltip:** hover a group to see which of its members are on your ignore list (with the ignore reason) or in your dossier (with your note). Works with players from other realms and alongside Raider.IO tooltips.
 
 ### Group History
 - Automatically logs everyone you group with in **Mythic+** (class, role, M+ level, last seen, how often you grouped).
@@ -61,7 +60,7 @@ The window has four tabs: **Dossier**, **Ignore List**, **History** and **Option
 | --- | --- |
 | Chat Messages | Reunion and warning messages in chat |
 | Ignore List | Block ignored players in chat · Use WoW's native ignore list · Auto-decline duels and invites |
-| Group Finder | Hide groups with ignored players · Inline warning in the group list |
+| Group Finder | Inline warning in the group list |
 | Group History | Track group history |
 | Import | Import WoW's native ignore list |
 | Minimap | Show minimap button |

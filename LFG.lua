@@ -1,16 +1,13 @@
 -- ============================================================
 --  PlayerDossier – LFG.lua
 --  Premade Group Finder integration:
---    • tooltip: mood icons next to known players + notes, warning
---      when an ignored player is in the group
---    • inline warning in the search result list
---    • optionally hide groups containing ignored players
+--    • tooltip: warning plus ignore reason / dossier note of known
+--      players in the group
+--    • "!IGNORED" warning in the search result list
 -- ============================================================
 
 local PD = PlayerDossier
 local L  = PD.L
-
-local ENTRY_HEIGHT = 52   -- height of a search result row
 
 -- ================================================================
 -- 1.  MEMBER CHECK (cached per search result)
@@ -100,49 +97,6 @@ lfgFrame:RegisterEvent("LFG_LIST_SEARCH_FAILED")
 -- 2.  TOOLTIP
 -- ================================================================
 
--- Removes color/texture codes so line text can be compared with a name
-local function StripCodes(s)
-    s = s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
-    s = s:gsub("|T.-|t", ""):gsub("|A.-|a", "")
-    return s
-end
-
--- Puts the mood icon right before the player's name in the Leader and
--- Members lines of the existing Blizzard/Raider.IO tooltip.
-local function AnnotateMemberLines(entry)
-    local marks = {}   -- name:lower() → icon
-    for name, realm in pairs(entry.dossier) do
-        local dEntry = PD:GetEntry(name, realm)
-        marks[name:lower()] = PD:MoodIcon(dEntry and dEntry.mood)
-    end
-    for name, realm in pairs(entry.ignored) do
-        if not marks[name:lower()] then
-            local dEntry = PD:GetEntry(name, realm)
-            marks[name:lower()] = PD:MoodIcon(dEntry and dEntry.mood or "negative")
-        end
-    end
-
-    for i = 2, GameTooltip:NumLines() do
-        for _, side in ipairs({ "Right", "Left" }) do
-            local fs   = _G["GameTooltipText" .. side .. i]
-            local text = fs and fs:GetText()
-            if text and not PD.IsSecret(text) and not text:find("PlayerDossier/Media", 1, true) then
-                local plain = StripCodes(text)
-                plain = plain:gsub("^.-:%s*", "")        -- drop a "Leader: " label
-                plain = plain:gsub("%s*%b()%s*$", "")    -- drop a trailing "(Horde)"
-                plain = strtrim(plain)
-                plain = plain:match("^([^%s%-]+)%-[^%s%-]+$") or plain   -- Name-Realm → Name
-                local icon = marks[plain:lower()]
-                local pos  = icon and text:find(plain, 1, true)
-                if pos then
-                    fs:SetText(text:sub(1, pos - 1) .. icon .. " " .. text:sub(pos))
-                    break
-                end
-            end
-        end
-    end
-end
-
 -- Sorted list of the names in a name→realm table
 local function SortedNames(tbl, skip)
     local names = {}
@@ -153,11 +107,11 @@ local function SortedNames(tbl, skip)
     return names
 end
 
-local function AddPlayerLine(name, realm, color)
-    local dEntry = PD:GetEntry(name, realm)
-    local line   = "  " .. PD:MoodIcon(dEntry and dEntry.mood) .. " |cff" .. color .. name .. "|r"
-    if dEntry and dEntry.note and dEntry.note ~= "" then
-        line = line .. " |cffaaaaaa– " .. dEntry.note .. "|r"
+-- "  Name – note"
+local function AddPlayerLine(name, note, color)
+    local line = "  |cff" .. color .. name .. "|r"
+    if note and note ~= "" then
+        line = line .. " |cffaaaaaa– " .. note .. "|r"
     end
     GameTooltip:AddLine(line, 1, 1, 1, true)
 end
@@ -167,24 +121,25 @@ local function CheckAndWarnTooltip(frame)
     local entry = CheckResult(frame.resultID)
     if not entry.hasIgnored and not entry.hasDossier then return end
 
-    AnnotateMemberLines(entry)
-
     GameTooltip:AddLine(" ")
 
+    -- Ignored players: show the ignore list reason
     if entry.hasIgnored then
         GameTooltip:AddLine("|cffff2e2e! " .. L["LFG_IGNORED_WARNING"] .. "|r")
         for _, name in ipairs(SortedNames(entry.ignored)) do
-            AddPlayerLine(name, entry.ignored[name], "ff8888")
+            local ignored = PD:IL_GetAll()[PD:GetKey(name, entry.ignored[name])]
+            AddPlayerLine(name, ignored and ignored.reason, "ff8888")
         end
     end
 
-    -- Dossier players that aren't ignored
+    -- Dossier players that aren't ignored: show the dossier note
     local others = SortedNames(entry.dossier, entry.ignored)
     if #others > 0 then
         if entry.hasIgnored then GameTooltip:AddLine(" ") end
         GameTooltip:AddLine("|cff9B82F3PlayerDossier:|r")
         for _, name in ipairs(others) do
-            AddPlayerLine(name, entry.dossier[name], "ffff88")
+            local dEntry = PD:GetEntry(name, entry.dossier[name])
+            AddPlayerLine(name, dEntry and dEntry.note, "ffff88")
         end
     end
 
@@ -194,72 +149,29 @@ end
 -- ================================================================
 -- 3.  INLINE WARNING
 --
--- Colors the group name red and prefixes a warning when the leader or a
+-- Colors the group name red and prefixes "!IGNORED" when the leader or a
 -- member is ignored - no hover needed. Blizzard re-sets frame.Name on
 -- every LFGListSearchEntry_Update and our secure hook runs afterwards,
 -- so the prefix never doubles up and non-ignored rows need no reset.
 -- ================================================================
-
-local INLINE_WARN_PREFIX = "|cffff2e2e!|r "
 
 local function ApplyInlineWarning(frame)
     if not frame or not frame.resultID or not frame.Name then return end
     if not PD:OPT_Get("lfgInlineWarning") then return end
 
     if CheckResult(frame.resultID).hasIgnored then
-        frame.Name:SetText(INLINE_WARN_PREFIX .. (frame.Name:GetText() or ""))
+        frame.Name:SetText("|cffff2e2e!" .. L["LFG_INLINE_IGNORED"] .. "|r " .. (frame.Name:GetText() or ""))
         frame.Name:SetTextColor(1, 0.35, 0.35)
     end
 end
 
--- ================================================================
--- 4.  HIDE GROUPS WITH IGNORED PLAYERS
---
--- frame:Hide() doesn't work here: the ScrollBox recycles frames and
--- calls Show() again, which makes hidden rows flicker back. Instead
--- we collapse the row (alpha 0, no mouse, height 0) after Blizzard
--- filled it in LFGListSearchEntry_SetResult.
--- ================================================================
-
-local function SetEntryHidden(frame, hidden)
-    frame:SetAlpha(hidden and 0 or 1)
-    frame:EnableMouse(not hidden)
-    if frame.SetHeight then frame:SetHeight(hidden and 0 or ENTRY_HEIGHT) end
-end
-
-local function OnSetResult(frame, resultID)
-    if not PD:OPT_Get("lfgHideIgnored") then
-        -- Option off: make sure a recycled frame is visible again
-        frame:SetAlpha(1)
-        frame:EnableMouse(true)
-        return
-    end
-    if not resultID then return end
-    SetEntryHidden(frame, CheckResult(resultID).hasIgnored)
-end
-
--- Catches rows that were rendered before our hook saw them
-local function FilterLFGResults()
-    if not PD:OPT_Get("lfgHideIgnored") then return end
-    local panel = LFGListFrame and LFGListFrame.SearchPanel
-    if not panel or not panel.ScrollBox then return end
-    panel.ScrollBox:ForEachFrame(function(frame)
-        if frame and frame.resultID then
-            SetEntryHidden(frame, CheckResult(frame.resultID).hasIgnored)
-        end
-    end)
-end
-
-lfgFrame:SetScript("OnEvent", function(_, event)
+lfgFrame:SetScript("OnEvent", function()
     wipe(resultCache)
     nameIndex = nil
-    if event == "LFG_LIST_SEARCH_RESULTS_RECEIVED" and PD:OPT_Get("lfgHideIgnored") then
-        C_Timer.After(0.2, FilterLFGResults)
-    end
 end)
 
 -- ================================================================
--- 5.  HOOKS
+-- 4.  HOOKS
 -- ================================================================
 
 local hooked = {}
@@ -278,8 +190,7 @@ local function InstallHooks()
             if GameTooltip:IsShown() then CheckAndWarnTooltip(frame) end
         end)
     end)
-    HookOnce("LFGListSearchEntry_Update",    ApplyInlineWarning)
-    HookOnce("LFGListSearchEntry_SetResult", OnSetResult)
+    HookOnce("LFGListSearchEntry_Update", ApplyInlineWarning)
 end
 
 -- Called from the BuildUI callback below

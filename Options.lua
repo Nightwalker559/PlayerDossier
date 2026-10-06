@@ -15,7 +15,6 @@ local DEFAULTS = {
     blockIgnored      = true,
     autoDecline       = true,
     classColors       = true,
-    lfgHideIgnored    = false,  -- hide LFG groups containing ignored players
     lfgInlineWarning  = true,   -- warn in the LFG result list
     syncNativeIgnore  = true,   -- also fill WoW's native ignore list
     trackGroupHistory = true,
@@ -26,6 +25,7 @@ PD:OnInit(function()
     for key, default in pairs(DEFAULTS) do
         if opt[key] == nil then opt[key] = default end
     end
+    opt.lfgHideIgnored = nil   -- option was removed in 1.1.0
 end)
 
 function PD:OPT_Get(key)
@@ -116,7 +116,6 @@ function PD:BuildOptionsPanel(panel)
 
     -- ── Group Finder (LFG) ───────────────────────────────────
     MakeSection(L["OPT_SEC_LFG"])
-    MakeCB("lfgHideIgnored",   L["OPT_LFG_HIDE"],   L["OPT_LFG_HIDE_SUB"])
     MakeCB("lfgInlineWarning", L["OPT_LFG_INLINE"], L["OPT_LFG_INLINE_SUB"])
 
     -- ── Ignore list ──────────────────────────────────────────

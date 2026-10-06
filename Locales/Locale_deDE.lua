@@ -140,11 +140,10 @@ L["OPT_AUTO_DECLINE_NOTE"] = "Hinweis: Funktioniert möglicherweise nicht, wenn 
 
 -- ── LFG ──────────────────────────────────────────────────────
 L["OPT_SEC_LFG"]         = "Gruppensuche (LFG)"
-L["OPT_LFG_HIDE"]        = "Gruppen mit ignorierten Spielern ausblenden"
-L["OPT_LFG_HIDE_SUB"]    = "Blendet LFG-Suchergebnisse aus, wenn der Gruppenleiter oder ein Mitglied auf der PlayerDossier-Ignorierliste steht (nicht nur WoWs native Liste)."
 L["OPT_LFG_INLINE"]      = "Warnung direkt in der Gruppenliste anzeigen"
-L["OPT_LFG_INLINE_SUB"]  = "Färbt den Gruppennamen rot und zeigt ein Warnsymbol direkt in der Suchergebnis-Zeile, wenn der Gruppenleiter oder ein Mitglied auf der PlayerDossier-Ignorierliste steht."
+L["OPT_LFG_INLINE_SUB"]  = "Färbt den Gruppennamen rot und setzt \"!IGNORED\" davor, wenn der Gruppenleiter oder ein Mitglied auf der PlayerDossier-Ignorierliste steht."
 L["LFG_IGNORED_WARNING"]  = "Ignorierter Spieler in dieser Gruppe:"
+L["LFG_INLINE_IGNORED"]   = "IGNORED"
 
 -- ── Ignore slots full warning ───────────────────────────────
 L["IL_SLOTS_FULL"] = "|cff9B82F3PlayerDossier:|r |cffff8800Alle 50 WoW-Ignorier-Slots sind voll. Weitere Spieler werden nur noch per Chat gefiltert.|r"

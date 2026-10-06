@@ -2,10 +2,10 @@
 
 ## [1.1.0] - 2026-10-06
 
-### New
-- LFG tooltip: mood icon next to known players in the Leader and Members lines.
-
 ### Changed
+- LFG tooltip: ignored players show their ignore reason (not the dossier note); no mood icons.
+- LFG inline warning now reads "!IGNORED" in front of the group name.
+- Removed the "Hide groups containing ignored players" option.
 - Chat filter also covers whispers, guild/officer chat and the leader/warning channels (party, raid, instance).
 - Chat filter: a sender with a realm only matches the exact Name-Realm; same-named players on other realms are no longer blocked.
 - Mood colors are the same in chat and UI.
