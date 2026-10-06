@@ -30,7 +30,7 @@
 - Init, UI-build and slash commands use registries (`PD:OnInit`, `PD:OnBuildUI`, `PD.commands`) instead of wrapped functions.
 - Shared helpers for realm names, group scans, Mythic+ check, moods and secret values.
 - Chat filter and native ignore import moved into IgnoreList.lua.
-- Dead code and unused locale keys removed, ElvUI skin simplified, all comments in English.
+- Dead code, unused locale keys and unused textures (sort arrows) removed, ElvUI skin simplified, all comments in English.
 
 ## [1.0.9] - 2026-09-20
 

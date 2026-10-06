@@ -36,7 +36,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 
 ## Installation
 
-1. Download the latest release (or clone this repository).
+1. Download the latest release.
 2. Place the `PlayerDossier` folder in `World of Warcraft/_retail_/Interface/AddOns/`.
 3. Start the game (or `/reload`).
 
@@ -59,7 +59,7 @@ The window has four tabs: **Dossier**, **Ignore List**, **History** and **Option
 | Section | Setting |
 | --- | --- |
 | Chat Messages | Reunion and warning messages in chat |
-| Ignore List | Block ignored players in chat · Use WoW's native ignore list · Auto-decline duels and invites |
+| Ignore List | Block ignored players in chat · Use WoW's native ignore list · Auto-decline duels and invites · Class colors for names |
 | Group Finder | Inline warning in the group list |
 | Group History | Track group history |
 | Import | Import WoW's native ignore list |
