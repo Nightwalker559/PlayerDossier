@@ -7,9 +7,6 @@
 local PD = PlayerDossier
 local L  = PD.L
 
--- Read from the .toc instead of a hardcoded copy so the two can't drift apart
-local ADDON_VERSION = C_AddOns.GetAddOnMetadata("PlayerDossier", "Version") or "?"
-
 -- ----------------------------------------------------------------
 -- Reunion notice
 -- ----------------------------------------------------------------
@@ -192,9 +189,6 @@ eventFrame:SetScript("OnEvent", function(_, event, arg1)
         if arg1 == "PlayerDossier" then
             PD:Init()
             PD:BuildUI()
-            local cnt = PD:Count()
-            print(string.format(L["PD_LOADED"], ADDON_VERSION, cnt,
-                cnt == 1 and L["entry"] or L["entries"]))
         end
 
     elseif event == "GROUP_ROSTER_UPDATE" then

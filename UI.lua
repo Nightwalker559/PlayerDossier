@@ -93,9 +93,6 @@ local function SaveNote()
     local note  = strtrim(PD.noteDialog.editBox:GetText())
     local class = ResolveClass(pending.name, pending.realm, pending.class, pending.guid)
     PD:SetEntry(pending.name, pending.realm, note, pending.mood, class, pending.guid)
-    if PD:OPT_Get("chatMessages") then
-        print(string.format(L["NOTE_SAVED"], pending.name))
-    end
     if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
     CloseNoteDialog()
 end

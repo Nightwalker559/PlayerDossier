@@ -205,20 +205,17 @@ end
 
 StaticPopupDialogs["PD_CONFIRM_CLEAR_PLAYERS"] = ConfirmDialog("OPT_CONFIRM_CLEAR_PLAYERS", function()
     PlayerDossierDB.players = {}
-    print(L["OPT_CLEARED_PLAYERS"])
     if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
 end)
 
 StaticPopupDialogs["PD_CONFIRM_CLEAR_IGNORE"] = ConfirmDialog("OPT_CONFIRM_CLEAR_IGNORE", function()
     PlayerDossierDB.ignoreList = {}
     PD:IL_Sync()   -- also empties WoW's native list
-    print(L["OPT_CLEARED_IGNORE"])
     if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
 end)
 
 StaticPopupDialogs["PD_CONFIRM_CLEAR_HISTORY"] = ConfirmDialog("OPT_CONFIRM_CLEAR_HISTORY", function()
     PlayerDossierDB.history = {}
-    print(L["OPT_CLEARED_HISTORY"])
     if PD.panel3 and PD.panel3:IsShown() then PD:RefreshHistoryPanel() end
 end)
 

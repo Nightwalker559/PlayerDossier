@@ -73,6 +73,13 @@ function PD:IL_Add(name, realm, reason)
     if PD:OPT_Get("chatMessages") then
         print(string.format(L["IL_IGNORED_MSG"], name))
     end
+
+    -- The new player got no native slot: warn once per session
+    if PD:OPT_Get("syncNativeIgnore") and not PlayerDossierDB.ignoreList[key].native
+       and not slotWarningShown then
+        slotWarningShown = true
+        if PD:OPT_Get("chatMessages") then print(L["IL_SLOTS_FULL"]) end
+    end
     RefreshPanelIfShown()
 end
 
@@ -175,14 +182,6 @@ function PD:IL_Sync()
     end
 
     local canAdd = math.max(0, MAX_NATIVE - numIgnores)
-
-    -- Warn once per session when all native slots are taken
-    if numIgnores >= MAX_NATIVE and not slotWarningShown then
-        slotWarningShown = true
-        if PD:OPT_Get("chatMessages") then
-            print(L["IL_SLOTS_FULL"])
-        end
-    end
 
     for _, entry in ipairs(list) do
         local target = PD.TargetName(entry.name, entry.realm)

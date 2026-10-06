@@ -8,7 +8,6 @@ if GetLocale() ~= "deDE" then return end
 local L = PlayerDossier.L
 
 -- ── General ──────────────────────────────────────────────────
-L["PD_LOADED"]           = "|cff9B82F3PlayerDossier|r v%s geladen. %d %s. Tippe |cffffff00/pd|r."
 L["entry"]               = "Eintrag"
 L["entries"]             = "Einträge"
 
@@ -48,7 +47,6 @@ L["BTN_CANCEL"]          = "Abbrechen"
 L["MOOD_GOOD"]           = "Gut"
 L["MOOD_NEUTRAL"]        = "Neutral"
 L["MOOD_BAD"]            = "Schlecht"
-L["NOTE_SAVED"]          = "|cff9B82F3PlayerDossier:|r %s gespeichert."
 
 -- ── Right-click menu ──────────────────────────────────────────
 L["MENU_ADD"]            = "Zum Dossier hinzufügen"
@@ -68,7 +66,6 @@ L["MM_OPEN_DOSSIER"]     = "Spieler-Dossier öffnen"
 L["MM_OPEN_IGNORE"]      = "Ignorier-Liste öffnen"
 L["MM_SHOW_BTN"]         = "Minimap-Button anzeigen"
 L["MM_HIDE_BTN"]         = "Minimap-Button verstecken"
-L["MM_SHOW_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap-Button wird angezeigt."
 L["MM_HIDE_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap-Button versteckt. Tippe |cffffff00/pd minimap|r zum Wiederherstellen."
 
 -- ── Ignore list panel ─────────────────────────────────────────
@@ -135,8 +132,6 @@ L["BTN_CLEAR_ALL"]            = "Alle entfernen"
 
 L["OPT_CONFIRM_CLEAR_PLAYERS"] = "ALLE Spieler aus dem Dossier entfernen? Dies kann nicht rückgängig gemacht werden."
 L["OPT_CONFIRM_CLEAR_IGNORE"]  = "ALLE ignorierten Spieler entfernen? Dies kann nicht rückgängig gemacht werden."
-L["OPT_CLEARED_PLAYERS"]       = "|cff9B82F3PlayerDossier:|r Alle Spieler entfernt."
-L["OPT_CLEARED_IGNORE"]        = "|cff9B82F3PlayerDossier:|r Alle ignorierten Spieler entfernt."
 
 -- ── Import ────────────────────────────────────────────────────
 L["OPT_SEC_IMPORT"]   = "Import"
@@ -186,4 +181,3 @@ L["OPT_SEC_HISTORY"]        = "Gruppenverlauf"
 L["OPT_TRACK_HISTORY"]      = "Gruppenverlauf aufzeichnen"
 L["OPT_TRACK_HISTORY_SUB"]  = "Erfasst automatisch alle Mitspieler, damit du sie später zum Dossier hinzufügen kannst."
 L["OPT_CONFIRM_CLEAR_HISTORY"] = "Den GESAMTEN Gruppenverlauf löschen? Dies kann nicht rückgängig gemacht werden."
-L["OPT_CLEARED_HISTORY"]    = "|cff9B82F3PlayerDossier:|r Gruppenverlauf gelöscht."

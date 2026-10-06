@@ -6,7 +6,6 @@
 local L = PlayerDossier.L
 
 -- ── General ──────────────────────────────────────────────────
-L["PD_LOADED"]           = "|cff9B82F3PlayerDossier|r v%s loaded. %d %s. Type |cffffff00/pd|r."
 L["entry"]               = "entry"
 L["entries"]             = "entries"
 
@@ -46,7 +45,6 @@ L["BTN_CANCEL"]          = "Cancel"
 L["MOOD_GOOD"]           = "Good"
 L["MOOD_NEUTRAL"]        = "Neutral"
 L["MOOD_BAD"]            = "Bad"
-L["NOTE_SAVED"]          = "|cff9B82F3PlayerDossier:|r Saved %s."
 
 -- ── Right-click menu ──────────────────────────────────────────
 L["MENU_ADD"]            = "Add to Dossier"
@@ -66,7 +64,6 @@ L["MM_OPEN_DOSSIER"]     = "Open Player Dossier"
 L["MM_OPEN_IGNORE"]      = "Open Ignore List"
 L["MM_SHOW_BTN"]         = "Show Minimap Button"
 L["MM_HIDE_BTN"]         = "Hide Minimap Button"
-L["MM_SHOW_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap button shown."
 L["MM_HIDE_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap button hidden. Type |cffffff00/pd minimap|r to restore."
 
 -- ── Ignore list panel ─────────────────────────────────────────
@@ -133,8 +130,6 @@ L["BTN_CLEAR_ALL"]            = "Remove All"
 
 L["OPT_CONFIRM_CLEAR_PLAYERS"] = "Remove ALL players from the dossier? This cannot be undone."
 L["OPT_CONFIRM_CLEAR_IGNORE"]  = "Remove ALL ignored players? This cannot be undone."
-L["OPT_CLEARED_PLAYERS"]       = "|cff9B82F3PlayerDossier:|r All players removed."
-L["OPT_CLEARED_IGNORE"]        = "|cff9B82F3PlayerDossier:|r All ignored players removed."
 
 -- ── Import ────────────────────────────────────────────────────
 L["OPT_SEC_IMPORT"]   = "Import"
@@ -184,4 +179,3 @@ L["OPT_SEC_HISTORY"]        = "Group History"
 L["OPT_TRACK_HISTORY"]      = "Track group history"
 L["OPT_TRACK_HISTORY_SUB"]  = "Automatically logs everyone you group with, so you can add them to the dossier later."
 L["OPT_CONFIRM_CLEAR_HISTORY"] = "Remove ALL group history? This cannot be undone."
-L["OPT_CLEARED_HISTORY"]    = "|cff9B82F3PlayerDossier:|r Group history cleared."

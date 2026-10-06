@@ -66,7 +66,6 @@ end
 local function ToggleMinimapButton()
     if PD:IsMinimapHidden() then
         PD:MinimapShow()
-        print(L["MM_SHOW_MSG"])
     else
         PD:MinimapHide()
         print(L["MM_HIDE_MSG"])

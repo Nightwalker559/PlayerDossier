@@ -9,6 +9,7 @@
 - Chat filter also covers whispers, guild/officer chat and the leader/warning channels (party, raid, instance).
 - Chat filter: a sender with a realm only matches the exact Name-Realm; same-named players on other realms are no longer blocked.
 - Mood colors are the same in chat and UI.
+- Quieter chat: no more login message and no confirmations for saved notes, "show minimap button" or "remove all". The "ignore slots full" warning now only appears when you ignore someone, not at login.
 
 ### Fixed
 - Realms with a space in the name ("Tarren Mill") are now stored as WoW reports them ("TarrenMill"); existing entries are migrated automatically.
