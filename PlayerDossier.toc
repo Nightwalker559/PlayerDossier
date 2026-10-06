@@ -15,6 +15,7 @@ libs/LibDBIcon-1.0/LibDBIcon-1.0.lua
 
 # ── Core
 Core.lua
+Widgets.lua
 
 # ── Locales
 Locales/Locale_enUS.lua
@@ -29,5 +30,5 @@ Options.lua
 LFG.lua
 GroupHistory.lua
 
-# ── Skins (last - frames müssen existieren)
+# ── Skins (last - the frames must exist)
 ElvUI_Skin.lua

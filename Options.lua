@@ -1,91 +1,100 @@
 -- ============================================================
 --  PlayerDossier – Options.lua
---  Tab 3: Einstellungen
---  Ersetzt den Chat-Filter-Tab.
+--  Options tab: saved settings, panel layout, confirmation dialogs
 -- ============================================================
 
 local PD = PlayerDossier
 local L  = PD.L
 
 -- ================================================================
--- DB-DEFAULTS
+-- SETTINGS
 -- ================================================================
 
-function PD:OPT_Init()
-    if not PlayerDossierDB then PD:Init() end
-    local db = PlayerDossierDB
-    if db.opt == nil then db.opt = {} end
-    local o = db.opt
-    if o.chatMessages   == nil then o.chatMessages   = true  end
-    if o.blockIgnored   == nil then o.blockIgnored   = true  end
-    if o.autoDecline    == nil then o.autoDecline    = true  end
-    if o.minimapButton  == nil then o.minimapButton  = true  end
-    if o.classColors    == nil then o.classColors    = true  end
-    if o.lfgHideIgnored == nil then o.lfgHideIgnored = false end  -- LFG-Filter
-    if o.lfgInlineWarning == nil then o.lfgInlineWarning = true end  -- Inline-Warnung in der Ergebnisliste
-    if o.syncNativeIgnore == nil then o.syncNativeIgnore = true end  -- WoW-native Ignorierliste befuellen
-    if o.trackGroupHistory == nil then o.trackGroupHistory = true end
-end
+local DEFAULTS = {
+    chatMessages      = true,
+    blockIgnored      = true,
+    autoDecline       = true,
+    classColors       = true,
+    lfgHideIgnored    = false,  -- hide LFG groups containing ignored players
+    lfgInlineWarning  = true,   -- warn in the LFG result list
+    syncNativeIgnore  = true,   -- also fill WoW's native ignore list
+    trackGroupHistory = true,
+}
+
+PD:OnInit(function()
+    local opt = PlayerDossierDB.opt
+    for key, default in pairs(DEFAULTS) do
+        if opt[key] == nil then opt[key] = default end
+    end
+end)
 
 function PD:OPT_Get(key)
     if not PlayerDossierDB or not PlayerDossierDB.opt then return true end
-    local v = PlayerDossierDB.opt[key]
-    return v ~= false   -- nil → true (default on)
+    return PlayerDossierDB.opt[key] ~= false   -- nil → true (default on)
 end
 
 function PD:OPT_Set(key, value)
-    PD:OPT_Init()
+    PD:EnsureDB()
     PlayerDossierDB.opt[key] = value
 end
 
 -- ================================================================
--- PANEL BUILD
+-- PANEL
 -- ================================================================
 
-function PD:BuildOptionsPanel(panel)
-    if panel._optBuilt then return end
-    panel._optBuilt = true
+local INDENT = 8
 
-    -- ScrollFrame damit alles reinpasst
+function PD:BuildOptionsPanel(panel)
+    -- Scroll frame so everything fits
     local sf = CreateFrame("ScrollFrame", "PDOptScrollFrame", panel, "UIPanelScrollFrameTemplate")
     sf:SetPoint("TOPLEFT",     panel, "TOPLEFT",     0,  0)
     sf:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -26, 0)
 
-    local content = CreateFrame("Frame", nil, sf)
-    content:SetWidth(sf:GetWidth())
-    content:SetHeight(600)  -- wird am Ende angepasst
-    sf:SetScrollChild(content)
+    local p = CreateFrame("Frame", nil, sf)   -- scroll content; all widgets live here
+    p:SetWidth(sf:GetWidth())
+    p:SetHeight(600)  -- adjusted at the end
+    sf:SetScrollChild(p)
 
-    local INDENT = 8
-    local yOff   = -8
-    local p = content  -- alle Widgets auf content statt panel
+    local yOff = -8
+    panel._optCbs = {}   -- option key → checkbox (also used by the ElvUI skin)
 
-    -- Helper: erstellt einen Abschnitt-Header mit Trennlinie
-    local function MakeSection(text, yOffset)
+    -- Section header with separator line
+    local function MakeSection(text)
         local sec = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        sec:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT, yOffset)
+        sec:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT, yOff)
         sec:SetText(text)
         sec:SetTextColor(0.9, 0.82, 0.5)
         local line = p:CreateTexture(nil, "ARTWORK")
         line:SetHeight(1)
         line:SetPoint("TOPLEFT",  sec, "BOTTOMLEFT",  0, -2)
-        line:SetPoint("TOPRIGHT", p,   "TOPRIGHT",   -INDENT, yOffset - 14)
+        line:SetPoint("TOPRIGHT", p,   "TOPRIGHT",   -INDENT, yOff - 14)
         line:SetColorTexture(0.4, 0.4, 0.4, 0.6)
-        return sec
+        yOff = yOff - 22
     end
 
-    local function MakeCB(key, lbl, sub, yOffset, onChange)
+    -- Checkbox with label and optional wrapped description. Advances yOff.
+    -- opts: onChange(checked), get() / set(checked) for non-standard storage.
+    -- Returns the checkbox and the row height it used.
+    local function MakeCB(key, label, sub, opts)
+        opts = opts or {}
+        local get = opts.get or function() return PD:OPT_Get(key) end
+        local set = opts.set or function(v) PD:OPT_Set(key, v) end
+
         local cb = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
         cb:SetSize(24, 24)
-        cb:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT, yOffset)
-        cb:SetChecked(PD:OPT_Get(key))
+        cb:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT, yOff)
+        cb:SetChecked(get())
+        cb._pdGet = get
         cb:SetScript("OnClick", function(self)
-            PD:OPT_Set(key, self:GetChecked())
-            if onChange then onChange(self:GetChecked()) end
+            set(self:GetChecked())
+            if opts.onChange then opts.onChange(self:GetChecked()) end
         end)
+        panel._optCbs[key] = cb
+
         local l = p:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         l:SetPoint("LEFT", cb, "RIGHT", 4, 0)
-        l:SetText(lbl)
+        l:SetText(label)
+
         local rowHeight = 40
         if sub then
             local s = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -94,226 +103,140 @@ function PD:BuildOptionsPanel(panel)
             s:SetJustifyH("LEFT")
             s:SetWordWrap(true)
             s:SetText(sub)
-            -- Zeilenumbruch statt Abschneiden: Zeilenhöhe dynamisch einrechnen
+            -- wrap instead of truncating: account for the text height
             rowHeight = 26 + s:GetStringHeight() + 14
         end
+        yOff = yOff - rowHeight
         return cb, rowHeight
     end
 
-    -- ── 0. GRUPPENVERLAUF ─────────────────────────────────────
-    MakeSection(L["OPT_SEC_HISTORY"], yOff) yOff = yOff - 22
-    local cb7, rh7 = MakeCB("trackGroupHistory", L["OPT_TRACK_HISTORY"], L["OPT_TRACK_HISTORY_SUB"], yOff)
-    yOff = yOff - rh7
+    -- ── Group history ────────────────────────────────────────
+    MakeSection(L["OPT_SEC_HISTORY"])
+    MakeCB("trackGroupHistory", L["OPT_TRACK_HISTORY"], L["OPT_TRACK_HISTORY_SUB"])
 
-    -- ── 1. GRUPPENSUCHE (LFG) ─────────────────────────────────
-    MakeSection(L["OPT_SEC_LFG"], yOff) yOff = yOff - 22
-    local cb6, rh6 = MakeCB("lfgHideIgnored", L["OPT_LFG_HIDE"], L["OPT_LFG_HIDE_SUB"], yOff)
-    yOff = yOff - rh6
-    local cb8, rh8 = MakeCB("lfgInlineWarning", L["OPT_LFG_INLINE"], L["OPT_LFG_INLINE_SUB"], yOff)
-    yOff = yOff - rh8
+    -- ── Group Finder (LFG) ───────────────────────────────────
+    MakeSection(L["OPT_SEC_LFG"])
+    MakeCB("lfgHideIgnored",   L["OPT_LFG_HIDE"],   L["OPT_LFG_HIDE_SUB"])
+    MakeCB("lfgInlineWarning", L["OPT_LFG_INLINE"], L["OPT_LFG_INLINE_SUB"])
 
-    -- ── 2. IGNORIER-LISTE ─────────────────────────────────────
-    MakeSection(L["OPT_SEC_IGNORE"], yOff) yOff = yOff - 22
-    local cb2, rh2 = MakeCB("blockIgnored",  L["OPT_BLOCK_IGNORED"],  L["OPT_BLOCK_IGNORED_SUB"],  yOff)
-    yOff = yOff - rh2
-    local cb9, rh9 = MakeCB("syncNativeIgnore", L["OPT_SYNC_NATIVE"], L["OPT_SYNC_NATIVE_SUB"], yOff, function()
-        PD:IL_Sync()
-        if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
-    end)
-    yOff = yOff - rh9
-    local cb3, rh3 = MakeCB("autoDecline",   L["OPT_AUTO_DECLINE"],   L["OPT_AUTO_DECLINE_SUB"],   yOff)
-    -- Orange Hinweis zur Auto-Decline-Einschränkung
-    local sub3b = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    sub3b:SetPoint("TOPLEFT", cb3, "BOTTOMLEFT", 28, -10 - (rh3 - 40))
-    sub3b:SetPoint("TOPRIGHT", p, "TOPRIGHT", -INDENT, -10 - (rh3 - 40))
-    sub3b:SetTextColor(1, 0.6, 0, 1)
-    sub3b:SetWordWrap(true)
-    sub3b:SetJustifyH("LEFT")
-    sub3b:SetText(L["OPT_AUTO_DECLINE_NOTE"])
-    yOff = yOff - rh3 - sub3b:GetStringHeight() - 16
-    local cb5, rh5 = MakeCB("classColors",   L["OPT_CLASS_COLORS"],   L["OPT_CLASS_COLORS_SUB"],   yOff, function()
-        if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
-    end)
-    yOff = yOff - rh5
+    -- ── Ignore list ──────────────────────────────────────────
+    MakeSection(L["OPT_SEC_IGNORE"])
+    MakeCB("blockIgnored", L["OPT_BLOCK_IGNORED"], L["OPT_BLOCK_IGNORED_SUB"])
+    MakeCB("syncNativeIgnore", L["OPT_SYNC_NATIVE"], L["OPT_SYNC_NATIVE_SUB"], {
+        onChange = function()
+            PD:IL_Sync()
+            if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
+        end,
+    })
+    local cbDecline, rhDecline = MakeCB("autoDecline", L["OPT_AUTO_DECLINE"], L["OPT_AUTO_DECLINE_SUB"])
+    -- Orange hint about the auto-decline limitation
+    local declineNote = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    declineNote:SetPoint("TOPLEFT",  cbDecline, "BOTTOMLEFT", 28, -10 - (rhDecline - 40))
+    declineNote:SetPoint("TOPRIGHT", p,         "TOPRIGHT",  -INDENT, -10 - (rhDecline - 40))
+    declineNote:SetTextColor(1, 0.6, 0, 1)
+    declineNote:SetWordWrap(true)
+    declineNote:SetJustifyH("LEFT")
+    declineNote:SetText(L["OPT_AUTO_DECLINE_NOTE"])
+    yOff = yOff - declineNote:GetStringHeight() - 16
+    MakeCB("classColors", L["OPT_CLASS_COLORS"], L["OPT_CLASS_COLORS_SUB"], {
+        onChange = function()
+            if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
+        end,
+    })
 
-    -- ── 3. IGNORIER-LIMIT WORKAROUND ──────────────────────────
-    MakeSection(L["OPT_SEC_LIMIT"], yOff) yOff = yOff - 22
+    -- ── Ignore limit workaround ──────────────────────────────
+    MakeSection(L["OPT_SEC_LIMIT"])
     panel.limitLabel = p:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     panel.limitLabel:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT + 4, yOff)
     panel.limitLabel:SetJustifyH("LEFT")
     yOff = yOff - 22
-    local infoText = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    infoText:SetPoint("TOPLEFT",  p, "TOPLEFT",  INDENT + 4, yOff)
-    infoText:SetPoint("TOPRIGHT", p, "TOPRIGHT", -INDENT, yOff)
-    infoText:SetJustifyH("LEFT")
-    infoText:SetText(L["OPT_LIMIT_INFO"])
+    local limitInfo = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    limitInfo:SetPoint("TOPLEFT",  p, "TOPLEFT",  INDENT + 4, yOff)
+    limitInfo:SetPoint("TOPRIGHT", p, "TOPRIGHT", -INDENT, yOff)
+    limitInfo:SetJustifyH("LEFT")
+    limitInfo:SetText(L["OPT_LIMIT_INFO"])
     yOff = yOff - 50
 
-    -- ── 4. IMPORT ─────────────────────────────────────────────
-    MakeSection(L["OPT_SEC_IMPORT"], yOff) yOff = yOff - 22
-    local importLabel = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    importLabel:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT + 4, yOff)
-    importLabel:SetWidth(540) importLabel:SetJustifyH("LEFT") importLabel:SetWordWrap(true)
-    importLabel:SetText(L["OPT_IMPORT_INFO"])
+    -- ── Import ───────────────────────────────────────────────
+    MakeSection(L["OPT_SEC_IMPORT"])
+    local importInfo = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+    importInfo:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT + 4, yOff)
+    importInfo:SetWidth(540)
+    importInfo:SetJustifyH("LEFT")
+    importInfo:SetWordWrap(true)
+    importInfo:SetText(L["OPT_IMPORT_INFO"])
     yOff = yOff - 30
     local importBtn = CreateFrame("Button", "PDImportIgnoreBtn", p, "UIPanelButtonTemplate")
-    importBtn:SetSize(280, 24) importBtn:SetText(L["OPT_IMPORT_BTN"])
+    importBtn:SetSize(280, 24)
+    importBtn:SetText(L["OPT_IMPORT_BTN"])
     importBtn:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT, yOff)
     importBtn:SetScript("OnClick", function()
-        local num, added, skipped = C_FriendList.GetNumIgnores(), 0, 0
-        for i = 1, num do
-            local fullName = C_FriendList.GetIgnoreName(i)
-            if fullName then
-                -- Letztes Segment nach "-" als Realm (Realm kann Bindestriche enthalten)
-                local name, realm = fullName:match("^(.+)-([^%-]+)$")
-                name = name or fullName
-                realm = realm or PD.GetMyRealm()
-                local key = PD:GetKey(name, realm)
-                if not PlayerDossierDB.ignoreList[key] then
-                    PlayerDossierDB.ignoreList[key] = { name=name, realm=realm, reason="", timestamp=time(), native=true }
-                    added = added + 1
-                else skipped = skipped + 1 end
-            end
-        end
-        if added > 0 then PD:IL_Sync() end
-        print(string.format(L["OPT_IMPORT_DONE"], added, skipped))
-        if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
+        print(string.format(L["OPT_IMPORT_DONE"], PD:IL_ImportNative()))
     end)
     yOff = yOff - 40
 
-    -- ── 5. MINIMAP ────────────────────────────────────────────
-    MakeSection(L["OPT_SEC_MINIMAP"], yOff) yOff = yOff - 22
-    local cb4 = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
-    cb4:SetSize(24, 24)
-    cb4:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT, yOff)
-    cb4:SetChecked(not (PlayerDossierDB and PlayerDossierDB.minimap and PlayerDossierDB.minimap.hide))
-    cb4:SetScript("OnClick", function(self)
-        if self:GetChecked() then PD:MinimapShow() else PD:MinimapHide() end
-    end)
-    local lbl4 = p:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-    lbl4:SetPoint("LEFT", cb4, "RIGHT", 4, 0)
-    lbl4:SetText(L["OPT_MINIMAP"])
-    yOff = yOff - 40
+    -- ── Minimap ──────────────────────────────────────────────
+    MakeSection(L["OPT_SEC_MINIMAP"])
+    MakeCB("minimap", L["OPT_MINIMAP"], nil, {
+        get = function() return not PD:IsMinimapHidden() end,
+        set = function(shown) if shown then PD:MinimapShow() else PD:MinimapHide() end end,
+    })
 
-    -- ── 6. NACHRICHTEN ────────────────────────────────────────
-    MakeSection(L["OPT_SEC_MESSAGES"], yOff) yOff = yOff - 22
-    local cb1, rh1 = MakeCB("chatMessages", L["OPT_CHAT_MESSAGES"], L["OPT_CHAT_MESSAGES_SUB"], yOff)
-    yOff = yOff - rh1
+    -- ── Chat messages ────────────────────────────────────────
+    MakeSection(L["OPT_SEC_MESSAGES"])
+    MakeCB("chatMessages", L["OPT_CHAT_MESSAGES"], L["OPT_CHAT_MESSAGES_SUB"])
 
-    content:SetHeight(math.abs(yOff) + 20)
-    panel._optCbs = { cb1=cb1, cb2=cb2, cb3=cb3, cb4=cb4, cb5=cb5, cb6=cb6, cb7=cb7, cb8=cb8, cb9=cb9 }
+    p:SetHeight(math.abs(yOff) + 20)
 end
 
--- StaticPopups für die Bestätigungsdialoge
-StaticPopupDialogs["PD_CONFIRM_CLEAR_PLAYERS"] = {
-    text     = L["OPT_CONFIRM_CLEAR_PLAYERS"],
-    button1  = L["BTN_DELETE_ALL"],
-    button2  = L["BTN_CANCEL"],
-    OnAccept = function()
-        if PlayerDossierDB then PlayerDossierDB.players = {} end
-        print(PlayerDossier.L["OPT_CLEARED_PLAYERS"])
-        if PlayerDossier.mainFrame and PlayerDossier.mainFrame:IsShown() then
-            PlayerDossier:RefreshMainWindow()
-        end
-    end,
-    timeout = 0, whileDead = true, hideOnEscape = true,
-}
+-- ================================================================
+-- CONFIRMATION DIALOGS ("Remove All")
+-- ================================================================
 
-StaticPopupDialogs["PD_CONFIRM_CLEAR_IGNORE"] = {
-    text     = L["OPT_CONFIRM_CLEAR_IGNORE"],
-    button1  = L["BTN_DELETE_ALL"],
-    button2  = L["BTN_CANCEL"],
-    OnAccept = function()
-        if PlayerDossierDB then PlayerDossierDB.ignoreList = {} end
-        -- WoW-native Liste ebenfalls leeren
-        PD:IL_Sync()
-        print(PlayerDossier.L["OPT_CLEARED_IGNORE"])
-        if PlayerDossier.panel2 and PlayerDossier.panel2:IsShown() then
-            PlayerDossier:RefreshIgnorePanel()
-        end
-    end,
-    timeout = 0, whileDead = true, hideOnEscape = true,
-}
+local function ConfirmDialog(textKey, onAccept)
+    return {
+        text     = L[textKey],
+        button1  = L["BTN_DELETE_ALL"],
+        button2  = L["BTN_CANCEL"],
+        OnAccept = onAccept,
+        timeout = 0, whileDead = true, hideOnEscape = true,
+    }
+end
 
-StaticPopupDialogs["PD_CONFIRM_CLEAR_HISTORY"] = {
-    text     = L["OPT_CONFIRM_CLEAR_HISTORY"],
-    button1  = L["BTN_DELETE_ALL"],
-    button2  = L["BTN_CANCEL"],
-    OnAccept = function()
-        if PlayerDossierDB then PlayerDossierDB.history = {} end
-        print(PlayerDossier.L["OPT_CLEARED_HISTORY"])
-        if PlayerDossier.panel3 and PlayerDossier.panel3:IsShown() then
-            PlayerDossier:RefreshHistoryPanel()
-        end
-    end,
-    timeout = 0, whileDead = true, hideOnEscape = true,
-}
+StaticPopupDialogs["PD_CONFIRM_CLEAR_PLAYERS"] = ConfirmDialog("OPT_CONFIRM_CLEAR_PLAYERS", function()
+    PlayerDossierDB.players = {}
+    print(L["OPT_CLEARED_PLAYERS"])
+    if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
+end)
+
+StaticPopupDialogs["PD_CONFIRM_CLEAR_IGNORE"] = ConfirmDialog("OPT_CONFIRM_CLEAR_IGNORE", function()
+    PlayerDossierDB.ignoreList = {}
+    PD:IL_Sync()   -- also empties WoW's native list
+    print(L["OPT_CLEARED_IGNORE"])
+    if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
+end)
+
+StaticPopupDialogs["PD_CONFIRM_CLEAR_HISTORY"] = ConfirmDialog("OPT_CONFIRM_CLEAR_HISTORY", function()
+    PlayerDossierDB.history = {}
+    print(L["OPT_CLEARED_HISTORY"])
+    if PD.panel3 and PD.panel3:IsShown() then PD:RefreshHistoryPanel() end
+end)
 
 -- ================================================================
--- REFRESH  (live-Daten aktualisieren wenn Tab geöffnet)
+-- REFRESH  (live data when the tab is opened)
 -- ================================================================
 
 function PD:RefreshOptionsPanel()
     local panel = PD.panel4
     if not panel or not panel.limitLabel then return end
 
-    local all     = PD.IL_GetAll and PD:IL_GetAll() or {}
-    local total   = 0
-    local native  = 0
-    local overflow = 0
-    for _, e in pairs(all) do
-        total = total + 1
-        if e.native then native = native + 1
-        else             overflow = overflow + 1 end
+    local native, overflow = 0, 0
+    for _, e in pairs(PD:IL_GetAll()) do
+        if e.native then native = native + 1 else overflow = overflow + 1 end
     end
-
     panel.limitLabel:SetText(string.format(L["OPT_LIMIT_STATUS"], native, overflow))
 
-    -- Checkboxen auf aktuellen DB-Stand setzen
-    local cbs = panel._optCbs
-    if not cbs then return end
-    cbs.cb1:SetChecked(PD:OPT_Get("chatMessages"))
-    cbs.cb2:SetChecked(PD:OPT_Get("blockIgnored"))
-    cbs.cb3:SetChecked(PD:OPT_Get("autoDecline"))
-    cbs.cb4:SetChecked(not (PlayerDossierDB and PlayerDossierDB.minimap and PlayerDossierDB.minimap.hide))
-    if cbs.cb5 then cbs.cb5:SetChecked(PD:OPT_Get("classColors")) end
-    if cbs.cb6 then cbs.cb6:SetChecked(PD:OPT_Get("lfgHideIgnored")) end
-    if cbs.cb7 then cbs.cb7:SetChecked(PD:OPT_Get("trackGroupHistory")) end
-    if cbs.cb8 then cbs.cb8:SetChecked(PD:OPT_Get("lfgInlineWarning")) end
-    if cbs.cb9 then cbs.cb9:SetChecked(PD:OPT_Get("syncNativeIgnore")) end
-end
-
--- ================================================================
--- INIT-HOOK
--- ================================================================
-
-local origInit = PD.Init
-PD.Init = function(self)
-    origInit(self)
-    PD:OPT_Init()
-end
-
--- ================================================================
--- ILChatFilterFunc  (Overflow-Workaround – läuft immer)
--- Spieler auf der Ignore-Liste die NICHT nativ sind, werden hier geblockt
--- ================================================================
-
-local IL_FILTER_EVENTS = {
-    "CHAT_MSG_SAY","CHAT_MSG_YELL","CHAT_MSG_EMOTE",
-    "CHAT_MSG_CHANNEL","CHAT_MSG_INSTANCE_CHAT","CHAT_MSG_RAID","CHAT_MSG_PARTY",
-}
-
-local function ILChatFilterFunc(_, event, msg, sender, ...)
-    if not PD:OPT_Get("blockIgnored") then return end
-    if not sender or sender == "" then return end
-    -- Letztes Segment als Realm (Realm-Namen koennen Bindestriche enthalten)
-    local name, realm = sender:match("^(.+)-([^%-]+)$")
-    if not name then name = sender end
-    if PD.IL_ShouldFilterSender and PD:IL_ShouldFilterSender(name, realm) then
-        return true
+    for _, cb in pairs(panel._optCbs) do
+        cb:SetChecked(cb._pdGet())
     end
-end
-
-for _, ev in ipairs(IL_FILTER_EVENTS) do
-    ChatFrame_AddMessageEventFilter(ev, ILChatFilterFunc)
 end

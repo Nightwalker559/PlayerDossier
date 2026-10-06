@@ -1,47 +1,105 @@
 -- ============================================================
 --  PlayerDossier – Core.lua
---  Namespace, SavedVariables, CRUD, Slash-Commands
+--  Namespace, shared helpers, SavedVariables, CRUD, slash commands
 -- ============================================================
 
 PlayerDossier = PlayerDossier or {}
 local PD = PlayerDossier
 
--- Locale-Tabelle: Fallback auf den Key selbst
+-- Locale table: missing strings fall back to the key itself
 PD.L = setmetatable({}, { __index = function(_, k) return k end })
+local L = PD.L
+
+local MEDIA = "Interface/AddOns/PlayerDossier/Media/"
 
 -- ----------------------------------------------------------------
--- Helpers
+-- Realm / name helpers
 -- ----------------------------------------------------------------
 
-local myRealm  -- gecacht nach ADDON_LOADED, danach unveränderlich
+local myRealm  -- cached on first use
 
--- Gibt den aktuellen Realm-Namen zurück (gecacht nach erstem Aufruf)
 local function GetMyRealm()
     if not myRealm then myRealm = GetRealmName() end
     return myRealm
 end
-PD.GetMyRealm = GetMyRealm  -- für andere Module
+PD.GetMyRealm = GetMyRealm
+
+-- Empty/missing realm means "same realm as the player"
+function PD.NormRealm(realm)
+    if type(realm) == "string" and realm ~= "" then return realm end
+    return GetMyRealm()
+end
+
+-- "Name-Realm" → name, realm (realm is nil when absent). Realm names may
+-- contain hyphens, so only the last segment counts as the realm.
+function PD.SplitName(full)
+    local name, realm = full:match("^(.+)-([^%-]+)$")
+    return name or full, realm
+end
+
+-- Canonical key: "Name-Realm"
+function PD:GetKey(name, realm)
+    return name .. "-" .. PD.NormRealm(realm)
+end
+
+-- Target string for WoW's native ignore list (realm only for foreign realms)
+function PD.NativeTarget(name, realm)
+    realm = PD.NormRealm(realm)
+    return (realm == GetMyRealm()) and name or (name .. "-" .. realm)
+end
 
 -- ----------------------------------------------------------------
--- Secret Values (WoW 12.0+ "Midnight"): UnitName() etc. can return
--- secret string values in certain restricted contexts (e.g. active
--- PvP matches, some restricted maps). Tainted addon code cannot
--- compare/concat these directly - doing so throws a hard Lua error.
--- This helper checks with issecretvalue() (global API, safe to call
--- on any value) and returns ok=false if the name/realm can't be
--- read right now, so callers can bail out gracefully instead of
--- crashing. See: https://warcraft.wiki.gg/wiki/Secret_Values
+-- Secret Values (WoW 12.0+ "Midnight"): UnitName(), chat senders etc.
+-- can return secret values in restricted contexts (active PvP matches,
+-- instances, ...). Tainted code must not compare/concatenate them -
+-- doing so throws a hard Lua error. issecretvalue() is safe to call
+-- on any value. See https://warcraft.wiki.gg/wiki/Secret_Values
 -- ----------------------------------------------------------------
+PD.IsSecret = issecretvalue or function() return false end
+
+-- Returns name, realm, ok. ok=false when the name can't be read right now.
 function PD:SafeUnitName(unit)
     local name, realm = UnitName(unit)
-    if type(issecretvalue) == "function" and (issecretvalue(name) or issecretvalue(realm)) then
+    if PD.IsSecret(name) or PD.IsSecret(realm) then
         return nil, nil, false
     end
     return name, realm, true
 end
 
--- Shared "time ago" formatter used by Players/Ignore/History panels
--- (was duplicated 3x before 1.8.0 - now a single source of truth)
+-- Calls fn(unit, name, realm) for every other player in the group whose
+-- name is readable. realm is normalized (never empty).
+function PD:ForEachGroupMember(fn)
+    local prefix = IsInRaid() and "raid" or "party"
+    for i = 1, GetNumGroupMembers() do
+        local unit = prefix .. i
+        if UnitExists(unit) and UnitIsPlayer(unit) and not UnitIsUnit(unit, "player") then
+            local name, realm, ok = PD:SafeUnitName(unit)
+            if ok and name then
+                fn(unit, name, PD.NormRealm(realm))
+            end
+        end
+    end
+end
+
+-- Only an active Mythic+ run counts; normal dungeons/heroics/raids don't.
+function PD:IsMythicPlusActive()
+    local isActive = C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive
+    if not isActive then return false end
+    local ok, active = pcall(isActive)
+    return ok and active or false
+end
+
+-- ----------------------------------------------------------------
+-- Misc helpers
+-- ----------------------------------------------------------------
+
+function PD.TableCount(t)
+    local n = 0
+    for _ in pairs(t) do n = n + 1 end
+    return n
+end
+
+-- "<1h" / "5h" / "12d"
 function PD:TimeAgo(ts)
     if not ts then return "?" end
     local diff = time() - ts
@@ -54,100 +112,99 @@ function PD:TimeAgo(ts)
     end
 end
 
--- Kanonischer Key: "Name-Realm"
-function PD:GetKey(name, realm)
-    if type(realm) ~= "string" or realm == "" then
-        realm = GetMyRealm()
-    end
-    return name .. "-" .. realm
-end
+-- ----------------------------------------------------------------
+-- Moods
+-- ----------------------------------------------------------------
 
--- ----------------------------------------------------------------
--- Gemeinsame Spalten-Positionen für Spieler-/Ignorier-/Verlauf-Tab.
--- Alle drei Panels liegen im selben Hauptfenster (gleiche Breite),
--- daher sorgen identische x-Werte für exakt gleiches Aussehen.
--- MODE ist exklusiv für den Verlauf-Tab (Modus-Spalte). LAST ist
--- "Notiz" bei Spieler/Ignorierliste, aber "Gruppiert" im Verlauf.
--- ----------------------------------------------------------------
-PD.COL = {
-    NAME  = 58,   -- Platz für das 48px Stimmungs-Icon im Spieler-Tab
-    REALM = 220,
-    ROLE  = 330,  -- nicht in Ignorierliste verwendet
-    MODE  = 370,  -- nur Verlauf (zeigt ausschließlich "M+"/"M+20" – ScanGroup() filtert auf ^M%+)
-    SEIT  = 440,
-    LAST  = 485,  -- Notiz (Spieler/Ignorierliste) bzw. Gruppiert (Verlauf)
+PD.MOOD = {
+    positive = { r = 0, g = 0.80, b = 0,    hex = "00cc00", labelKey = "MOOD_GOOD",    file = "mood_good",    order = 1 },
+    neutral  = { r = 1, g = 0.85, b = 0,    hex = "ffdd00", labelKey = "MOOD_NEUTRAL", file = "mood_neutral", order = 2 },
+    negative = { r = 1, g = 0.18, b = 0.18, hex = "ff2e2e", labelKey = "MOOD_BAD",     file = "mood_bad",     order = 3 },
 }
+for _, m in pairs(PD.MOOD) do
+    m.tex = MEDIA .. m.file .. ".png"
+end
 
--- ----------------------------------------------------------------
--- Gemeinsamer Tabellenkopf für Spieler-/Ignorier-/Verlauf-Tab.
--- Sorgt dafür, dass alle drei Tabs optisch identisch aussehen und
--- jede Spaltenüberschrift bis zur nächsten Spalte (bzw. bei der
--- letzten Spalte bis zum rechten Rand) breit ist, statt ohne
--- Breitenbegrenzung ggf. abgeschnitten zu wirken.
---
--- heads: { { text=<string>, x=<pixel-offset von links> }, ... }
---        sortiert nach x aufsteigend.
--- rightPad: Abstand zum rechten Panelrand (Standard 26, passt zur
---           Scrollbar-Breite der drei ScrollFrames).
--- ----------------------------------------------------------------
-function PD:BuildColumnHeaders(panel, heads, rightPad)
-    rightPad = rightPad or 26
-    for i, h in ipairs(heads) do
-        local fs = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        fs:SetPoint("TOPLEFT", panel, "TOPLEFT", h.x + 2, -4)
-        local nextX  = heads[i + 1] and heads[i + 1].x
-        local width  = nextX and (nextX - h.x - 4)
-            or (panel:GetWidth() - h.x - rightPad - 2)
-        if width and width > 0 then fs:SetWidth(width) end
-        fs:SetJustifyH("LEFT")
-        fs:SetText(h.text)
-        fs:SetTextColor(0.9, 0.82, 0.5)
-    end
+-- Unknown / missing moods count as neutral
+function PD:GetMood(id)
+    return PD.MOOD[id] or PD.MOOD.neutral
+end
 
-    -- Trennlinie unter den Überschriften (einheitlich für alle drei Tabs)
-    local sep = panel:CreateTexture(nil, "ARTWORK")
-    sep:SetHeight(1)
-    sep:SetPoint("TOPLEFT",  panel, "TOPLEFT",   4,  -18)
-    sep:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -rightPad, -18)
-    sep:SetColorTexture(0.4, 0.4, 0.4, 0.8)
+-- Inline texture string for chat/tooltips
+function PD:MoodIcon(id, size)
+    size = size or 16
+    return string.format("|T%s:%d:%d|t", PD:GetMood(id).tex, size, size)
 end
 
 -- ----------------------------------------------------------------
--- Frame-Pooling für Zeilen in Players-/Ignorier-/Verlauf-Panel.
--- Jedes Panel hatte vorher seine eigene identische Pool-Implementierung
--- (rowPool/GetRow/HideAllRows) - jetzt eine gemeinsame Fabrikfunktion.
+-- Init / UI-build callbacks. Modules register here instead of
+-- wrapping PD.Init / PD.BuildUI.
 -- ----------------------------------------------------------------
-function PD:NewRowPool()
-    local pool = {}
-    local function GetRow(parent)
-        for _, r in ipairs(pool) do
-            if not r:IsShown() then r:SetParent(parent) r:Show() return r end
-        end
-        local r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-        table.insert(pool, r)
-        return r
-    end
-    local function HideAll()
-        for _, r in ipairs(pool) do r:Hide() end
-    end
-    return GetRow, HideAll
+
+local initCallbacks, buildCallbacks = {}, {}
+
+function PD:OnInit(fn)    initCallbacks[#initCallbacks + 1] = fn end
+function PD:OnBuildUI(fn) buildCallbacks[#buildCallbacks + 1] = fn end
+
+function PD:RunBuildCallbacks()
+    for _, fn in ipairs(buildCallbacks) do fn() end
 end
 
 -- ----------------------------------------------------------------
--- DB-Initialisierung
+-- Slash commands. Modules add subcommands to PD.commands.
 -- ----------------------------------------------------------------
 
+PD.commands = {}
+
+SLASH_PLAYERDOSSIER1 = "/pd"
+SLASH_PLAYERDOSSIER2 = "/playerdossier"
+SLASH_PLAYERDOSSIER3 = "/dossier"
+
+SlashCmdList["PLAYERDOSSIER"] = function(msg)
+    local cmd = strtrim((msg or ""):lower())
+    if cmd == "" then cmd = "list" end
+    local handler = PD.commands[cmd]
+    if handler then
+        handler()
+    else
+        print(L["SLASH_UNKNOWN"])
+    end
+end
+
+PD.commands.list  = function() PD:ToggleMainWindow() end
+PD.commands.clear = function() StaticPopup_Show("PD_CONFIRM_CLEAR_PLAYERS") end
+PD.commands.help  = function()
+    print(L["SLASH_HELP_HEADER"])
+    print(L["SLASH_HELP_PD"])
+    print(L["SLASH_HELP_IGNORE"])
+    print(L["SLASH_HELP_MINIMAP"])
+    print(L["SLASH_HELP_CLEAR"])
+    print(L["SLASH_HELP_HELP"])
+    print(L["SLASH_HELP_ADD"])
+end
+
+-- ----------------------------------------------------------------
+-- SavedVariables
+-- ----------------------------------------------------------------
+
+-- Creates the top-level tables; safe to call repeatedly
+function PD:EnsureDB()
+    PlayerDossierDB = PlayerDossierDB or { version = 1 }
+    local db = PlayerDossierDB
+    db.players    = db.players    or {}
+    db.ignoreList = db.ignoreList or {}
+    db.history    = db.history    or {}
+    db.opt        = db.opt        or {}
+end
+
+-- Called once from ADDON_LOADED
 function PD:Init()
-    if not PlayerDossierDB then
-        PlayerDossierDB = { players = {}, version = 1 }
-    end
-    if not PlayerDossierDB.players then
-        PlayerDossierDB.players = {}
-    end
+    PD:EnsureDB()
+    for _, fn in ipairs(initCallbacks) do fn() end
 end
 
 -- ----------------------------------------------------------------
--- CRUD
+-- CRUD (dossier entries)
 -- ----------------------------------------------------------------
 
 function PD:GetEntry(name, realm)
@@ -158,8 +215,8 @@ end
 
 -- mood: "positive" | "negative" | "neutral"
 function PD:SetEntry(name, realm, note, mood, class, guid)
-    PD:Init()
-    realm = (realm and realm ~= "") and realm or GetMyRealm()
+    PD:EnsureDB()
+    realm = PD.NormRealm(realm)
     local key = PD:GetKey(name, realm)
     local old = PlayerDossierDB.players[key]
     PlayerDossierDB.players[key] = {
@@ -186,55 +243,5 @@ function PD:GetAllEntries()
 end
 
 function PD:Count()
-    local n = 0
-    for _ in pairs(PD:GetAllEntries()) do n = n + 1 end
-    return n
+    return PD.TableCount(PD:GetAllEntries())
 end
-
--- ----------------------------------------------------------------
--- Slash-Commands
--- ----------------------------------------------------------------
-
-SLASH_PLAYERDOSSIER1 = "/pd"
-SLASH_PLAYERDOSSIER2 = "/playerdossier"
-SLASH_PLAYERDOSSIER3 = "/dossier"
-
-SlashCmdList["PLAYERDOSSIER"] = function(msg)
-    local L = PD.L
-    msg = msg and strtrim(msg:lower()) or ""
-    if msg == "" or msg == "list" then
-        PD:ToggleMainWindow()
-    elseif msg == "clear" then
-        StaticPopup_Show("PD_CONFIRM_CLEAR")
-    elseif msg == "help" then
-        print(L["SLASH_HELP_HEADER"])
-        print(L["SLASH_HELP_PD"])
-        print(L["SLASH_HELP_IGNORE"])
-        print(L["SLASH_HELP_MINIMAP"])
-        print(L["SLASH_HELP_CLEAR"])
-        print(L["SLASH_HELP_HELP"])
-        print(L["SLASH_HELP_ADD"])
-    else
-        print(L["SLASH_UNKNOWN"])
-    end
-end
-
--- ----------------------------------------------------------------
--- Static Popups (hier definiert, L ist zu dem Zeitpunkt schon geladen)
--- ----------------------------------------------------------------
-
-StaticPopupDialogs["PD_CONFIRM_CLEAR"] = {
-    text         = function() return PlayerDossier.L["CONFIRM_CLEAR"] end,
-    button1      = function() return PlayerDossier.L["BTN_DELETE_ALL"] end,
-    button2      = function() return PlayerDossier.L["BTN_CANCEL"] end,
-    OnAccept     = function()
-        if PlayerDossierDB then PlayerDossierDB.players = {} end
-        print(PlayerDossier.L["CLEARED_MSG"])
-        if PlayerDossier.mainFrame and PlayerDossier.mainFrame:IsShown() then
-            PlayerDossier:RefreshMainWindow()
-        end
-    end,
-    timeout      = 0,
-    whileDead    = true,
-    hideOnEscape = true,
-}

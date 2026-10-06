@@ -48,8 +48,6 @@ L["MOOD_NEUTRAL"]        = "Neutral"
 L["MOOD_BAD"]            = "Bad"
 L["NOTE_SAVED"]          = "|cff9B82F3PlayerDossier:|r Saved %s."
 
--- ── Add Player popup ──────────────────────────────────────────
-
 -- ── Right-click menu ──────────────────────────────────────────
 L["MENU_ADD"]            = "Add to Dossier"
 L["MENU_EDIT"]           = "[%s] Edit Note"
@@ -71,8 +69,6 @@ L["MM_HIDE_BTN"]         = "Hide Minimap Button"
 L["MM_SHOW_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap button shown."
 L["MM_HIDE_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap button hidden. Type |cffffff00/pd minimap|r to restore."
 
--- ── Chat filter panel ─────────────────────────────────────────
-
 -- ── Ignore list panel ─────────────────────────────────────────
 L["IL_EMPTY"]            = "No ignored players.\nRight-click any player and choose Ignore."
 L["BTN_UNIGNORE_PLAIN"]  = "Unignore"
@@ -85,12 +81,6 @@ L["POPUP_EDIT_REASON_TEXT"] = "Ignore reason for |cffffffff%s|r:"
 L["BTN_EDIT_REASON"]     = "Edit reason"
 L["BTN_EDIT_DOSSIER"]    = "Edit note in Player Dossier"
 L["MENU_ADD_DOSSIER"]    = "Add to Player Dossier"
-
--- ── Reunion notice ────────────────────────────────────────────
-
--- ── Confirm clear ─────────────────────────────────────────────
-L["CONFIRM_CLEAR"]       = "Delete ALL PlayerDossier entries? This cannot be undone."
-L["CLEARED_MSG"]         = "|cff9B82F3PlayerDossier:|r All entries deleted."
 
 -- ── Options panel ─────────────────────────────────────────────
 L["TAB_OPTIONS"]              = "Options"
@@ -109,8 +99,6 @@ L["OPT_LIMIT_STATUS"]         = "|cffffff00%d / 50|r in WoW system    |cffaaaaaa
 L["OPT_LIMIT_INFO"]           = "WoW allows 50 ignore slots per character. PlayerDossier uses all 50 of them and filters the rest silently via the chat system — giving you unlimited ignores."
 L["OPT_SEC_MINIMAP"]          = "Minimap"
 L["OPT_MINIMAP"]              = "Show minimap button"
-
--- ── Recent Allies ─────────────────────────────────────────────
 
 -- ── Ignore List columns ───────────────────────────────────────
 L["IL_COL_NAME"]   = "Player Name"
@@ -140,7 +128,7 @@ L["SLASH_HELP_ADD"]     = "  Right-click any player or chat name to add them to 
 L["OPT_CLASS_COLORS"]     = "Show player names in class colors"
 L["OPT_CLASS_COLORS_SUB"] = "Colors player names by their class. Disable for white names."
 
--- ── Cleanup section ───────────────────────────────────────────
+-- ── Cleanup ───────────────────────────────────────────
 L["BTN_CLEAR_ALL"]            = "Remove All"
 
 L["OPT_CONFIRM_CLEAR_PLAYERS"] = "Remove ALL players from the dossier? This cannot be undone."
@@ -168,6 +156,7 @@ L["LFG_IGNORED_WARNING"]  = "Ignored player in this group:"
 -- ── Ignore slots full warning ─────────────────────────────────
 L["IL_SLOTS_FULL"] = "|cff9B82F3PlayerDossier:|r |cffff8800All 50 WoW ignore slots are full. Additional players will be filtered via chat only.|r"
 L["IL_DUEL_DECLINED"] = "|cff9B82F3PlayerDossier:|r Auto-declined duel from ignored player |cffff2e2e%s|r."
+L["IL_GROUP_WARNING"] = "|cff9B82F3PlayerDossier:|r |cffff2e2eWARNING:|r Ignored player |cffff2e2e%s|r is in your group!"
 
 -- ── Group History ─────────────────────────────────────────────
 L["TAB_HISTORY"]         = "History"

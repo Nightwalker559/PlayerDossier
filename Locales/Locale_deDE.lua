@@ -1,6 +1,6 @@
 -- ============================================================
 --  PlayerDossier – Locales/Locale_deDE.lua
---  Deutsche Übersetzung (deDE)
+--  German translation (deDE)
 -- ============================================================
 
 if GetLocale() ~= "deDE" then return end
@@ -50,8 +50,6 @@ L["MOOD_NEUTRAL"]        = "Neutral"
 L["MOOD_BAD"]            = "Schlecht"
 L["NOTE_SAVED"]          = "|cff9B82F3PlayerDossier:|r %s gespeichert."
 
--- ── Add Player popup ──────────────────────────────────────────
-
 -- ── Right-click menu ──────────────────────────────────────────
 L["MENU_ADD"]            = "Zum Dossier hinzufügen"
 L["MENU_EDIT"]           = "[%s] Vermerk bearbeiten"
@@ -73,8 +71,6 @@ L["MM_HIDE_BTN"]         = "Minimap-Button verstecken"
 L["MM_SHOW_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap-Button wird angezeigt."
 L["MM_HIDE_MSG"]         = "|cff9B82F3PlayerDossier:|r Minimap-Button versteckt. Tippe |cffffff00/pd minimap|r zum Wiederherstellen."
 
--- ── Chat filter panel ─────────────────────────────────────────
-
 -- ── Ignore list panel ─────────────────────────────────────────
 L["IL_EMPTY"]            = "Keine ignorierten Spieler.\nRechtsklick auf einen Spieler und 'Ignorieren' wählen."
 L["BTN_UNIGNORE_PLAIN"]  = "Entfernen"
@@ -87,12 +83,6 @@ L["POPUP_EDIT_REASON_TEXT"] = "Ignorier-Grund für |cffffffff%s|r:"
 L["BTN_EDIT_REASON"]     = "Grund bearbeiten"
 L["BTN_EDIT_DOSSIER"]    = "Notiz im Spieler-Dossier bearbeiten"
 L["MENU_ADD_DOSSIER"]    = "Ins Spieler-Dossier aufnehmen"
-
--- ── Reunion notice ────────────────────────────────────────────
-
--- ── Confirm clear ─────────────────────────────────────────────
-L["CONFIRM_CLEAR"]       = "ALLE PlayerDossier-Einträge löschen? Dies kann nicht rückgängig gemacht werden."
-L["CLEARED_MSG"]         = "|cff9B82F3PlayerDossier:|r Alle Einträge gelöscht."
 
 -- ── Options panel ─────────────────────────────────────────────
 L["TAB_OPTIONS"]              = "Optionen"
@@ -112,15 +102,13 @@ L["OPT_LIMIT_INFO"]           = "WoW erlaubt 50 Ignorier-Slots pro Charakter. Pl
 L["OPT_SEC_MINIMAP"]          = "Minimap"
 L["OPT_MINIMAP"]              = "Minimap-Button anzeigen"
 
--- ── Recent Allies ─────────────────────────────────────────────
-
--- ── Ignorier-Liste Spalten ────────────────────────────────────
+-- ── Ignore List columns ────────────────────────────────────
 L["IL_COL_NAME"]   = "Spielername"
 L["IL_COL_REALM"]  = "Server"
 L["IL_COL_LISTED"] = "Seit"
 L["IL_COL_NOTE"]   = "Notiz"
 
--- ── Spieler-Panel Spalten ─────────────────────────────────────
+-- ── Players panel columns ─────────────────────────────────────
 L["PL_COL_NAME"]  = "Spielername"
 L["PL_COL_REALM"] = "Server"
 L["PL_COL_ROLE"]  = "Rolle"
@@ -131,18 +119,18 @@ L["IL_IGNORED_HINT"]    = "Ignoriert"
 L["BTN_COPY_NAME"]      = "Name-Server kopieren"
 L["COPY_POPUP_TITLE"]   = "Kopieren – Strg+C"
 
--- ── Gruppe verlassen / Kick ───────────────────────────────────
+-- ── Group leave / kick ───────────────────────────────────
 L["LINK_REMEMBER"]  = "Zum Dossier"
 L["LINK_EDIT"]      = "Bearbeiten"
 L["LINK_LEFT_GROUP"]= "hat die Gruppe verlassen"
 L["KICKED_MSG"]     = "Du hast die Gruppe verlassen. Jemanden merken?"
 L["SLASH_HELP_ADD"]     = "  Rechtsklick auf einen Spieler oder Chat-Namen um ihn hinzuzufügen."
 
--- ── Klassenfarben Option ──────────────────────────────────────
+-- ── Class colors option ──────────────────────────────────────
 L["OPT_CLASS_COLORS"]     = "Spielernamen in Klassenfarbe anzeigen"
 L["OPT_CLASS_COLORS_SUB"] = "Färbt Namen nach Klasse. Deaktivieren für weiße Namen."
 
--- ── Aufräumen ─────────────────────────────────────────────────
+-- ── Cleanup ─────────────────────────────────────────────────
 L["BTN_CLEAR_ALL"]            = "Alle entfernen"
 
 L["OPT_CONFIRM_CLEAR_PLAYERS"] = "ALLE Spieler aus dem Dossier entfernen? Dies kann nicht rückgängig gemacht werden."
@@ -156,7 +144,7 @@ L["OPT_IMPORT_INFO"]  = "Alle Spieler aus WoWs nativer Ignorierliste in die Play
 L["OPT_IMPORT_BTN"]   = "WoW-Ignorierliste importieren"
 L["OPT_IMPORT_DONE"]  = "|cff9B82F3PlayerDossier:|r Import abgeschlossen. %d hinzugefügt, %d bereits vorhanden."
 
--- ── Auto-Ablehnen Hinweis ─────────────────────────────────────
+-- ── Auto-decline note ─────────────────────────────────────
 L["OPT_AUTO_DECLINE_NOTE"] = "Hinweis: Funktioniert möglicherweise nicht, wenn ein anderes Addon Einladungen schneller annimmt als PlayerDossier sie ablehnen kann."
 
 -- ── LFG ──────────────────────────────────────────────────────
@@ -167,11 +155,12 @@ L["OPT_LFG_INLINE"]      = "Warnung direkt in der Gruppenliste anzeigen"
 L["OPT_LFG_INLINE_SUB"]  = "Färbt den Gruppennamen rot und zeigt ein Warnsymbol direkt in der Suchergebnis-Zeile, wenn der Gruppenleiter oder ein Mitglied auf der PlayerDossier-Ignorierliste steht."
 L["LFG_IGNORED_WARNING"]  = "Ignorierter Spieler in dieser Gruppe:"
 
--- ── Ignorier-Slots voll Warnung ───────────────────────────────
+-- ── Ignore slots full warning ───────────────────────────────
 L["IL_SLOTS_FULL"] = "|cff9B82F3PlayerDossier:|r |cffff8800Alle 50 WoW-Ignorier-Slots sind voll. Weitere Spieler werden nur noch per Chat gefiltert.|r"
 L["IL_DUEL_DECLINED"] = "|cff9B82F3PlayerDossier:|r Duell von ignoriertem Spieler |cffff2e2e%s|r automatisch abgelehnt."
+L["IL_GROUP_WARNING"] = "|cff9B82F3PlayerDossier:|r |cffff2e2eWARNUNG:|r Ignorierter Spieler |cffff2e2e%s|r ist in deiner Gruppe!"
 
--- ── Gruppenverlauf ────────────────────────────────────────────
+-- ── Group History ────────────────────────────────────────────
 L["TAB_HISTORY"]         = "Verlauf"
 L["SUB_NO_HISTORY"]      = "Kein Gruppenverlauf"
 L["SUB_1_HISTORY"]       = "1 Spieler im Verlauf"

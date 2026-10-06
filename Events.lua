@@ -11,39 +11,20 @@ local L  = PD.L
 local ADDON_VERSION = C_AddOns.GetAddOnMetadata("PlayerDossier", "Version") or "?"
 
 -- ----------------------------------------------------------------
--- Mood colours for chat notices
--- ----------------------------------------------------------------
-
--- Inline-Textur-Icons für den Chat (|T...:h:w|t Format)
-local MOOD_ICON = {
-    positive = "|TInterface/AddOns/PlayerDossier/Media/mood_good.png:16:16|t",
-    negative = "|TInterface/AddOns/PlayerDossier/Media/mood_bad.png:16:16|t",
-    neutral  = "|TInterface/AddOns/PlayerDossier/Media/mood_neutral.png:16:16|t",
-}
-
-local MOOD_COLOR = {
-    positive = { hex="00d000" },
-    negative = { hex="ff3030" },
-    neutral  = { hex="ffdd00" },
-}
-
--- ----------------------------------------------------------------
--- Reunion notification
+-- Reunion notice
 -- ----------------------------------------------------------------
 
 function PD:ShowReunionNotice(entry)
     if not PD:OPT_Get("chatMessages") then return end
-    local mood  = entry.mood or "neutral"
-    local icon  = MOOD_ICON[mood]  or MOOD_ICON.neutral
-    local col   = MOOD_COLOR[mood] or MOOD_COLOR.neutral
+    local mood = PD:GetMood(entry.mood)
 
-    local nameStr = entry.name or "Unknown"
+    local nameStr = entry.name or "?"
     if entry.realm and entry.realm ~= PD.GetMyRealm() then
         nameStr = nameStr .. "|cff888888-" .. entry.realm .. "|r"
     end
 
     local line = string.format("|cff9B82F3[PlayerDossier]|r %s |cff%s%s|r",
-        icon, col.hex, nameStr)
+        PD:MoodIcon(entry.mood), mood.hex, nameStr)
     if entry.note and entry.note ~= "" then
         line = line .. " |cffaaaaaa– " .. entry.note .. "|r"
     end
@@ -52,66 +33,51 @@ end
 
 -- ----------------------------------------------------------------
 -- Clickable "remember" hyperlink
--- Format: |Hpd:remember:Name:Realm|h[remember them]|h
+-- Format: |Hpd:remember:Name:Realm:Class|h[remember them]|h
 -- ----------------------------------------------------------------
 
--- Hilfsfunktion: Name in Klassenfarbe + optionaler Realm-Suffix
+-- Name in class color plus realm suffix for foreign realms
 local function ColoredName(name, realm, class)
-    local myRealm = PD.GetMyRealm()
     local cc = RAID_CLASS_COLORS and class and RAID_CLASS_COLORS[class]
     local nameStr
     if cc then
-        nameStr = string.format("|cff%02x%02x%02x%s|r", cc.r*255, cc.g*255, cc.b*255, name)
+        nameStr = string.format("|cff%02x%02x%02x%s|r", cc.r * 255, cc.g * 255, cc.b * 255, name)
     else
         nameStr = "|cffdddddd" .. name .. "|r"
     end
-    if realm and realm ~= myRealm then
+    if realm and realm ~= PD.GetMyRealm() then
         nameStr = nameStr .. "|cff888888-" .. realm .. "|r"
     end
     return nameStr
 end
 
--- Hyperlink auch Klasse mitgeben: pd:remember:Name:Realm:Class
 local function MakeRememberLink(name, realm, class, linkText)
-    realm    = (realm and realm ~= "") and realm or PD.GetMyRealm()
-    class    = class or "UNKNOWN"
-    linkText = linkText or L["LINK_REMEMBER"]
     return string.format("|Hpd:remember:%s:%s:%s|h|cff9B82F3[%s]|r|h",
-        name, realm, class, linkText)
+        name, PD.NormRealm(realm), class or "UNKNOWN", linkText or L["LINK_REMEMBER"])
 end
 
--- Hook: Klasse aus dem Link extrahieren
-local function PD_OnHyperlinkClick(_, link, _, button)
+local function OnHyperlinkClick(_, link, _, button)
+    if button ~= "LeftButton" then return end
     local name, realm, class = link:match("^pd:remember:(.+):(.+):(.+)$")
-    -- Fallback für alte Links ohne Klasse
-    if not name then
-        name, realm = link:match("^pd:remember:(.+):(.+)$")
-    end
     if not name then return end
-    if button == "LeftButton" then
-        PD:OpenNoteDialog(name, realm, class ~= "UNKNOWN" and class or nil, nil, "positive")
-    end
+    PD:OpenNoteDialog(name, realm, class ~= "UNKNOWN" and class or nil, nil, "positive")
 end
 
-local function HookChatFrame(cf)
-    if cf and not cf._pdHooked then
-        cf._pdHooked = true
-        cf:HookScript("OnHyperlinkClick", PD_OnHyperlinkClick)
-    end
-end
-
--- Alle bestehenden Chat-Frames hooken
-for i = 1, (NUM_CHAT_WINDOWS or 10) do
-    HookChatFrame(_G["ChatFrame"..i])
-end
-
--- Neu erstellte Chat-Fenster (Floated/Docked) ebenfalls hooken
-hooksecurefunc("FCF_OpenNewWindow", function()
-    C_Timer.After(0, function()
-        for i = 1, (NUM_CHAT_WINDOWS or 10) do
-            HookChatFrame(_G["ChatFrame"..i])
+local function HookChatFrames()
+    for i = 1, (NUM_CHAT_WINDOWS or 10) do
+        local cf = _G["ChatFrame" .. i]
+        if cf and not cf._pdHooked then
+            cf._pdHooked = true
+            cf:HookScript("OnHyperlinkClick", OnHyperlinkClick)
         end
-    end)
+    end
+end
+
+HookChatFrames()
+
+-- Newly created chat windows (floated/docked) need the hook too
+hooksecurefunc("FCF_OpenNewWindow", function()
+    C_Timer.After(0, HookChatFrames)
 end)
 
 -- ----------------------------------------------------------------
@@ -119,112 +85,68 @@ end)
 -- ----------------------------------------------------------------
 
 -- Snapshot of current group members: key → { name, realm, class, guid }
-local prevGroup      = {}
-local selfInGroup    = false   -- war der Spieler selbst in einer Gruppe?
-local wasMythicPlus  = false   -- war die zuletzt gesehene Gruppe eine aktive M+ Gruppe?
-
--- Only an active Mythic+ run counts; normal dungeons/heroics/raids don't.
-local function IsMythicPlusActive()
-    local ok, active = pcall(function()
-        return C_ChallengeMode and C_ChallengeMode.IsChallengeModeActive and C_ChallengeMode.IsChallengeModeActive()
-    end)
-    return ok and active or false
-end
+local prevGroup     = {}
+local selfInGroup   = false   -- was the player in a group at the last roster update?
+local wasInRaid     = false
+local wasMythicPlus = false   -- was the last seen group an active M+ group?
 
 local function SnapshotGroup()
-    local snap    = {}
-    local isRaid  = IsInRaid()
-    local num     = GetNumGroupMembers()
-    for i = 1, num do
-        local unit = isRaid and ("raid"..i) or ("party"..i)
-        if UnitExists(unit) and UnitIsPlayer(unit) and not UnitIsUnit(unit, "player") then
-            local name, realm, ok = PD:SafeUnitName(unit)
-            if ok and name then
-                realm = (realm and realm ~= "") and realm or PD.GetMyRealm()
-                local _, class = UnitClass(unit)
-                local guid     = UnitGUID(unit)
-                local key      = PD:GetKey(name, realm)
-                snap[key] = { name=name, realm=realm, class=class, guid=guid }
-            end
-        end
-    end
+    local snap = {}
+    PD:ForEachGroupMember(function(unit, name, realm)
+        local _, class = UnitClass(unit)
+        snap[PD:GetKey(name, realm)] = { name = name, realm = realm, class = class, guid = UnitGUID(unit) }
+    end)
     return snap
 end
 
--- Zeigt die "has left the group" Nachricht mit klickbarem Link
-local function ShowLeavePrompt(info)
-    if not PD:OPT_Get("chatMessages") then return end
-    local name  = info.name
-    local realm = info.realm
-    local class = info.class
-
-    -- Klasse ins Dossier schreiben wenn noch unbekannt
-    local entry = PD:GetEntry(name, realm)
-    if entry and (not entry.class or entry.class == "UNKNOWN") and class then
-        entry.class = class
+-- Builds the clickable "Add to Dossier"/"Edit Note" link for a player and
+-- stores the class on an existing dossier entry if it was still unknown.
+local function RememberAction(info)
+    local entry = PD:GetEntry(info.name, info.realm)
+    if entry and (not entry.class or entry.class == "UNKNOWN") and info.class then
+        entry.class = info.class
     end
-
-    local action = MakeRememberLink(name, realm, class,
+    return MakeRememberLink(info.name, info.realm, info.class,
         entry and L["LINK_EDIT"] or L["LINK_REMEMBER"])
-
-    local line = string.format(
-        "|cff9B82F3[PlayerDossier]|r %s %s. %s",
-        ColoredName(name, realm, class), L["LINK_LEFT_GROUP"], action
-    )
-    print(line)
 end
 
--- Wird aufgerufen wenn der Spieler selbst aus der Gruppe fliegt (Kick)
--- Zeigt für alle vorherigen Gruppenmitglieder einen Prompt
+-- "<name> has left the group. [Add to Dossier]"
+local function ShowLeavePrompt(info)
+    if not PD:OPT_Get("chatMessages") then return end
+    print(string.format("|cff9B82F3[PlayerDossier]|r %s %s. %s",
+        ColoredName(info.name, info.realm, info.class), L["LINK_LEFT_GROUP"], RememberAction(info)))
+end
+
+-- The player was removed from the group: prompt for every previous member
 local function ShowKickedPrompts(snapshot)
     if not PD:OPT_Get("chatMessages") then return end
     if not next(snapshot) then return end
     C_Timer.After(0.3, function()
         print(string.format("|cff9B82F3[PlayerDossier]|r %s", L["KICKED_MSG"]))
         for _, info in pairs(snapshot) do
-            local entry = PD:GetEntry(info.name, info.realm)
-            -- Klasse ins Dossier schreiben wenn noch unbekannt
-            if entry and (not entry.class or entry.class == "UNKNOWN") and info.class then
-                entry.class = info.class
-            end
-            local action = MakeRememberLink(info.name, info.realm, info.class,
-                entry and L["LINK_EDIT"] or L["LINK_REMEMBER"])
-            print("  " .. ColoredName(info.name, info.realm, info.class) .. " " .. action)
+            print("  " .. ColoredName(info.name, info.realm, info.class) .. " " .. RememberAction(info))
         end
     end)
 end
 
 -- ----------------------------------------------------------------
--- Players we already notified this session (reunion notices)
+-- Reunion check
 -- ----------------------------------------------------------------
 
-local wasInRaid             = false
-local notifiedThisSession   = {}
-local rosterUpdatePending   = false   -- Debounce fuer GROUP_ROSTER_UPDATE
+local notifiedThisSession = {}
+local rosterUpdatePending = false   -- debounce for GROUP_ROSTER_UPDATE
 
--- prevSnap: Snapshot VOR dem Update (nil = Login/Reload, alle pruefen)
+-- prevSnap: snapshot from BEFORE the update (nil = login/reload, check everyone)
 function PD:CheckGroupMembers(prevSnap)
-    local isRaid   = IsInRaid()
-    local maxSlots = GetNumGroupMembers()
-    for i = 1, maxSlots do
-        local unit = isRaid and ("raid"..i) or ("party"..i)
-        if UnitExists(unit) and UnitIsPlayer(unit) then
-            local name, realm, ok = PD:SafeUnitName(unit)
-            if ok and name then
-                realm = (realm and realm ~= "") and realm or PD.GetMyRealm()
-                local key = PD:GetKey(name, realm)
-                -- Bereits gemeldet oder schon im vorigen Snapshot (= nicht neu)
-                if not notifiedThisSession[key]
-                and not (prevSnap and prevSnap[key]) then
-                    local entry = PD:GetEntry(name, realm)
-                    if entry then
-                        notifiedThisSession[key] = true
-                        PD:ShowReunionNotice(entry)
-                    end
-                end
-            end
+    PD:ForEachGroupMember(function(_, name, realm)
+        local key = PD:GetKey(name, realm)
+        if notifiedThisSession[key] or (prevSnap and prevSnap[key]) then return end
+        local entry = PD:GetEntry(name, realm)
+        if entry then
+            notifiedThisSession[key] = true
+            PD:ShowReunionNotice(entry)
         end
-    end
+    end)
 end
 
 -- ----------------------------------------------------------------
@@ -232,13 +154,38 @@ end
 -- ----------------------------------------------------------------
 
 local eventFrame = CreateFrame("Frame", "PDEventFrame")
-
 eventFrame:RegisterEvent("ADDON_LOADED")
 eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 eventFrame:RegisterEvent("GROUP_LEFT")
 
-eventFrame:SetScript("OnEvent", function(self, event, arg1)
+local function OnRosterUpdate()
+    rosterUpdatePending = false
+
+    local nowGroup      = SnapshotGroup()
+    local nowInGroup    = IsInGroup()
+    local nowInRaid     = IsInRaid()
+    local nowMythicPlus = PD:IsMythicPlusActive()
+
+    -- Leave detection: only in 5-man groups, never in raids, only during M+
+    if selfInGroup and nowInGroup and not nowInRaid and nowMythicPlus then
+        for key, info in pairs(prevGroup) do
+            if not nowGroup[key] then
+                ShowLeavePrompt(info)
+            end
+        end
+    end
+
+    -- Reunion: only announce newly arrived members
+    PD:CheckGroupMembers(prevGroup)
+
+    prevGroup     = nowGroup
+    selfInGroup   = nowInGroup
+    wasInRaid     = nowInRaid
+    wasMythicPlus = nowMythicPlus
+end
+
+eventFrame:SetScript("OnEvent", function(_, event, arg1)
     if event == "ADDON_LOADED" then
         if arg1 == "PlayerDossier" then
             PD:Init()
@@ -249,39 +196,15 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         end
 
     elseif event == "GROUP_ROSTER_UPDATE" then
-        -- Debounce: GROUP_ROSTER_UPDATE feuert oft 3-5x rapid hintereinander.
-        -- Nur den ersten Timer starten; weitere Events bis zum Ablauf ignorieren.
+        -- GROUP_ROSTER_UPDATE often fires 3-5x in quick succession:
+        -- start one timer and ignore further events until it fires.
         if not rosterUpdatePending then
             rosterUpdatePending = true
-            C_Timer.After(0.6, function()
-                rosterUpdatePending = false
-
-                local nowGroup     = SnapshotGroup()
-                local nowInGrp     = IsInGroup()
-                local nowInRaid    = IsInRaid()
-                local nowMythicPlus = IsMythicPlusActive()
-
-                -- Leave-Detection nur in 5er-Gruppe, NICHT im Raid, NUR waehrend M+
-                if selfInGroup and nowInGrp and not nowInRaid and nowMythicPlus then
-                    for key, info in pairs(prevGroup) do
-                        if not nowGroup[key] then
-                            ShowLeavePrompt(info)
-                        end
-                    end
-                end
-
-                -- Reunion: nur neu hinzugekommene Mitglieder melden
-                PD:CheckGroupMembers(prevGroup)
-
-                prevGroup     = nowGroup
-                selfInGroup   = nowInGrp
-                wasInRaid     = nowInRaid
-                wasMythicPlus = nowMythicPlus
-            end)
+            C_Timer.After(0.6, OnRosterUpdate)
         end
 
     elseif event == "GROUP_LEFT" then
-        -- Nur in 5er-Gruppe Prompts zeigen, NICHT nach Raid-Verlassen, NUR wenn es M+ war
+        -- Kick prompts only for a 5-man M+ group, not after leaving a raid
         if selfInGroup and not wasInRaid and wasMythicPlus and next(prevGroup) then
             ShowKickedPrompts(prevGroup)
         end
@@ -293,13 +216,12 @@ eventFrame:SetScript("OnEvent", function(self, event, arg1)
         wipe(notifiedThisSession)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
-        -- arg1 = isLogin (true nur beim ersten Login/Reload, nicht bei Zonenwechsel)
+        -- arg1 = isLogin (true only on first login/reload, not on zone changes)
         if arg1 then
             wipe(notifiedThisSession)
         end
-        -- Snapshot aktualisieren; initiale Reunion-Notices fuer bestehende Gruppe
         C_Timer.After(1, function()
-            -- nil als prevSnap: alle aktuellen Mitglieder pruefen (Login/Reload)
+            -- nil as prevSnap: check all current members (login/reload)
             PD:CheckGroupMembers(nil)
             prevGroup   = SnapshotGroup()
             selfInGroup = IsInGroup()
