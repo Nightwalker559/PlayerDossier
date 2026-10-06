@@ -1,5 +1,29 @@
 # PlayerDossier – Changelog
 
+## [Unreleased]
+
+### Fixed
+- Auto-decline of trade requests did nothing (it hid `TradeFrame`, which isn't shown yet at that point). It now cancels the request and closes the trade popup.
+- Chat filter and auto-decline no longer risk a Lua error when WoW 12.x hands out a secret sender name (e.g. inside instances); such messages are simply left alone.
+- The "Ignored player is in your group" warning could print several times in a row (once per ignore-list update, e.g. right after login). Bursts are now collapsed into one warning. The message is now localized (it was hardcoded English).
+- Every note save re-ran the addon's init chain and scheduled another ignore-list sync 2 seconds later. Init now runs exactly once.
+- Whisper from the Players tab to a player on a realm with a space in its name (e.g. "Tarren Mill") produced an invalid target.
+- Raid roster scans no longer treat the player themselves as a group member (could cause a bogus reunion notice for your own dossier entry).
+- Options panel subtitle showed "Chat Messages" instead of "Options".
+
+### Changed
+- The chat filter now also covers whispers, guild/officer chat and the party/raid/instance *leader* and raid warning channels (previously only say/yell/emote/channels/raid/party/instance).
+- Mood colors are now identical in chat notices and in the UI (single shared definition).
+
+### Internal cleanup (no behavior change)
+- New `Widgets.lua` with the shared UI building blocks; the Players, Ignore List and History panels now use the same helpers for list setup, rows, labels, empty state and subtitle instead of three copies.
+- Single registries for init/build callbacks (`PD:OnInit`, `PD:OnBuildUI`) and slash subcommands (`PD.commands`) replace the chained wrappers around `PD.Init`, `PD.BuildUI` and `SlashCmdList`.
+- Shared helpers for name/realm parsing, the group member loop, the Mythic+ check, mood data and secret-value checks replace many duplicated snippets.
+- The chat filter moved from Options.lua into IgnoreList.lua, the native-ignore import into `PD:IL_ImportNative()`, and the ignore/history/options DB tables are created once in `PD:EnsureDB()`.
+- Removed dead code (legacy link format, unused options key `minimapButton`, duplicate "clear players" confirmation and its locale keys, unused count helpers, redundant build flags).
+- ElvUI skin: one skinning path per tab instead of two overlapping ones.
+- All code comments are now in English.
+
 ## [1.1.0] - 2026-10-06
 
 ### New

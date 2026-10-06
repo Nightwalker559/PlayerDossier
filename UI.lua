@@ -1,65 +1,50 @@
 -- ============================================================
 --  PlayerDossier – UI.lua
---  Ein Fenster mit 3 Tabs (Players / Chat Filters / Ignore List)
---  Panel-Inhalte werden von IgnoreList.lua befüllt
+--  Unit tooltip, note dialog, right-click menus, main window with
+--  4 tabs (Players / Ignore List / History / Options) and the
+--  Players panel. The other panels are built in IgnoreList.lua,
+--  GroupHistory.lua and Options.lua.
 -- ============================================================
 
 local PD = PlayerDossier
-local L = PD.L
+local L  = PD.L
 
 -- ================================================================
--- GEMEINSAME KONSTANTEN
--- ================================================================
-
-local MOOD = {
-    positive = { r=0,   g=0.80, b=0,    hex="00cc00", label=L["MOOD_GOOD"],    tex="Interface/AddOns/PlayerDossier/Media/mood_good.png"    },
-    negative = { r=1,   g=0.18, b=0.18, hex="ff2e2e", label=L["MOOD_BAD"],     tex="Interface/AddOns/PlayerDossier/Media/mood_bad.png"     },
-    neutral  = { r=1,   g=0.85, b=0,    hex="ffdd00", label=L["MOOD_NEUTRAL"], tex="Interface/AddOns/PlayerDossier/Media/mood_neutral.png"  },
-}
-
--- ================================================================
--- 1.  TOOLTIP  (kein Unit*-API -> kein Taint)
+-- 1.  UNIT TOOLTIP  (no Unit* API → no taint)
 -- ================================================================
 
 TooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, function(tooltip, data)
     if not data then return end
 
-    -- data.guid ist ein "secret value" im tainted Context -> pcall noetig
+    -- data.guid is a secret value in tainted contexts → pcall
     local ok, guid = pcall(function() return data.guid end)
     if not ok or not guid then return end
 
-    -- Nur Player-GUIDs verarbeiten
+    -- Player GUIDs only
     local okMatch, guidType = pcall(string.match, guid, "^(%a+)-")
     if not okMatch or guidType ~= "Player" then return end
 
-    -- GetPlayerInfoByGUID ebenfalls absichern
     local okInfo, _, _, _, _, _, name, realm = pcall(GetPlayerInfoByGUID, guid)
     if not okInfo or not name then return end
 
-    realm = (realm and realm ~= "") and realm or PD.GetMyRealm()
     local entry = PD:GetEntry(name, realm)
     if not entry then return end
 
-    local m    = MOOD[entry.mood] or MOOD.neutral
-    local icon = string.format("|T%s:14:14|t", m.tex)
-    local line = string.format("|cff9B82F3[PD]|r %s |cff%s%s|r", icon, m.hex, name)
+    local line = string.format("|cff9B82F3[PD]|r %s |cff%s%s|r",
+        PD:MoodIcon(entry.mood, 14), PD:GetMood(entry.mood).hex, name)
     if entry.note and entry.note ~= "" then
         line = line .. " |cffaaaaaa- " .. entry.note .. "|r"
     end
     tooltip:AddLine(line, 1, 1, 1, true)
 end)
 
--- 2.  NOTE-DIALOG
+-- ================================================================
+-- 2.  NOTE DIALOG
 -- ================================================================
 
-local pending = {}
+local pending = {}   -- player currently being edited
 
-local MOOD_BTNS = {
-    { id="positive", label=L["MOOD_GOOD"],    r=0,   g=0.80, b=0    },
-    { id="neutral",  label=L["MOOD_NEUTRAL"], r=1,   g=0.85, b=0    },
-    { id="negative",  label=L["MOOD_BAD"],     r=1,   g=0.18, b=0.18 },
-}
-
+local MOOD_BUTTONS = { "positive", "neutral", "negative" }
 local MOOD_SELECTED_ALPHA   = 1.0
 local MOOD_UNSELECTED_ALPHA = 0.40
 
@@ -67,62 +52,52 @@ local function RefreshMoodBtns()
     local f = PD.noteDialog
     if not f then return end
     for _, btn in ipairs(f.moodBtns) do
-        local selected = btn.moodId == pending.mood
-        if selected then
+        local fs = btn:GetFontString()
+        if btn.moodId == pending.mood then
             btn:LockHighlight()
             btn:SetAlpha(MOOD_SELECTED_ALPHA)
-            btn:GetFontString():SetFont(btn:GetFontString():GetFont(), 13, "OUTLINE")
+            fs:SetFont(fs:GetFont(), 13, "OUTLINE")
         else
             btn:UnlockHighlight()
             btn:SetAlpha(MOOD_UNSELECTED_ALPHA)
-            btn:GetFontString():SetFont(btn:GetFontString():GetFont(), 11, "")
+            fs:SetFont(fs:GetFont(), 11, "")
         end
     end
 end
 
+-- Finds the class token for a player: known class → GUID → current group
 local function ResolveClass(name, realm, class, guid)
-    -- Bereits bekannt
     if class and class ~= "UNKNOWN" and class ~= "" then return class end
 
-    -- Aus GUID via GetPlayerInfoByGUID
     if guid and guid ~= "" then
         local ok, _, _, _, _, engClass = pcall(GetPlayerInfoByGUID, guid)
         if ok and engClass and engClass ~= "" then return engClass end
     end
 
-    -- Aktuelle Gruppe scannen
-    local myRealm = PD.GetMyRealm()
-    realm = (realm and realm ~= "") and realm or myRealm
-    local isRaid = IsInRaid()
-    local num    = GetNumGroupMembers()
-    for i = 1, num do
-        local unit = isRaid and ("raid"..i) or ("party"..i)
-        if UnitExists(unit) then
-            local n, r, ok = PD:SafeUnitName(unit)
-            if ok then
-                r = (r and r ~= "") and r or myRealm
-                if n == name and r == realm then
-                    local _, engClass = UnitClass(unit)
-                    if engClass then return engClass end
-                end
-            end
+    realm = PD.NormRealm(realm)
+    local found
+    PD:ForEachGroupMember(function(unit, n, r)
+        if not found and n == name and r == realm then
+            found = select(2, UnitClass(unit))
         end
-    end
+    end)
+    return found or class or "UNKNOWN"
+end
 
-    return class or "UNKNOWN"
+local function CloseNoteDialog()
+    PD.noteDialog:Hide()
+    wipe(pending)
 end
 
 local function SaveNote()
-    local f = PD.noteDialog
-    local note = strtrim(f.editBox:GetText())
-    local resolvedClass = ResolveClass(pending.name, pending.realm, pending.class, pending.guid)
-    PD:SetEntry(pending.name, pending.realm, note, pending.mood, resolvedClass, pending.guid)
+    local note  = strtrim(PD.noteDialog.editBox:GetText())
+    local class = ResolveClass(pending.name, pending.realm, pending.class, pending.guid)
+    PD:SetEntry(pending.name, pending.realm, note, pending.mood, class, pending.guid)
     if PD:OPT_Get("chatMessages") then
         print(string.format(L["NOTE_SAVED"], pending.name))
     end
     if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
-    f:Hide()
-    wipe(pending)
+    CloseNoteDialog()
 end
 
 function PD:BuildNoteDialog()
@@ -130,50 +105,53 @@ function PD:BuildNoteDialog()
     local f = CreateFrame("Frame", "PDNoteDialog", UIParent, "BasicFrameTemplateWithInset")
     f:SetSize(340, 185)
     f:SetPoint("CENTER")
-    f:SetMovable(true) f:EnableMouse(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop",  f.StopMovingOrSizing)
-    f:SetClampedToScreen(true)
-    f:SetFrameStrata("DIALOG") f:SetFrameLevel(100) f:Hide()
-    f:SetScript("OnKeyDown", function(self, key)
-        if key == "ESCAPE" then self:Hide() wipe(pending) end
+    PD:MakeDraggable(f)
+    f:SetFrameStrata("DIALOG")
+    f:SetFrameLevel(100)
+    f:Hide()
+    f:SetScript("OnKeyDown", function(_, key)
+        if key == "ESCAPE" then CloseNoteDialog() end
     end)
     f:SetPropagateKeyboardInput(true)
 
     f.editBox = CreateFrame("EditBox", "PDNoteEditBox", f, "InputBoxTemplate")
     f.editBox:SetSize(295, 20)
     f.editBox:SetPoint("TOP", f.InsetBg, "TOP", 0, -12)
-    f.editBox:SetMaxLetters(60) f.editBox:SetAutoFocus(false)
-    f.editBox:SetScript("OnEscapePressed", function() f:Hide() wipe(pending) end)
+    f.editBox:SetMaxLetters(60)
+    f.editBox:SetAutoFocus(false)
+    f.editBox:SetScript("OnEscapePressed", CloseNoteDialog)
     f.editBox:SetScript("OnEnterPressed",  SaveNote)
 
     f.moodBtns = {}
-    for i, def in ipairs(MOOD_BTNS) do
-        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        btn:SetSize(86, 22) btn:SetText(def.label)
-        btn:GetFontString():SetTextColor(def.r, def.g, def.b)
-        btn:SetPoint("TOPLEFT", f.editBox, "BOTTOMLEFT", (i-1)*90, -10)
-        btn.moodId = def.id
-        btn:SetScript("OnClick", function() pending.mood = def.id RefreshMoodBtns() end)
+    for i, moodId in ipairs(MOOD_BUTTONS) do
+        local mood = PD.MOOD[moodId]
+        local btn  = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        btn:SetSize(86, 22)
+        btn:SetText(L[mood.labelKey])
+        btn:GetFontString():SetTextColor(mood.r, mood.g, mood.b)
+        btn:SetPoint("TOPLEFT", f.editBox, "BOTTOMLEFT", (i - 1) * 90, -10)
+        btn.moodId = moodId
+        btn:SetScript("OnClick", function() pending.mood = moodId RefreshMoodBtns() end)
         f.moodBtns[i] = btn
     end
 
     local saveBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    saveBtn:SetSize(90, 22) saveBtn:SetText(L["BTN_SAVE"])
+    saveBtn:SetSize(90, 22)
+    saveBtn:SetText(L["BTN_SAVE"])
     saveBtn:SetPoint("BOTTOMLEFT", f.InsetBg, "BOTTOMLEFT", 8, 8)
     saveBtn:SetScript("OnClick", SaveNote)
 
     local cancelBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    cancelBtn:SetSize(90, 22) cancelBtn:SetText(L["BTN_CANCEL"])
+    cancelBtn:SetSize(90, 22)
+    cancelBtn:SetText(L["BTN_CANCEL"])
     cancelBtn:SetPoint("BOTTOMRIGHT", f.InsetBg, "BOTTOMRIGHT", -8, 8)
-    cancelBtn:SetScript("OnClick", function() f:Hide() wipe(pending) end)
+    cancelBtn:SetScript("OnClick", CloseNoteDialog)
 
     PD.noteDialog = f
 end
 
 function PD:OpenNoteDialog(name, realm, class, guid, defaultMood)
-    realm = (realm and realm ~= "") and realm or PD.GetMyRealm()
+    realm = PD.NormRealm(realm)
     local entry = PD:GetEntry(name, realm)
     pending.name  = name
     pending.realm = realm
@@ -184,240 +162,161 @@ function PD:OpenNoteDialog(name, realm, class, guid, defaultMood)
     local f = PD.noteDialog
     f.TitleText:SetText(string.format(L["NOTE_TITLE"], name))
     f.editBox:SetText(entry and entry.note or "")
-    f.editBox:SetFocus() f.editBox:HighlightText()
-    RefreshMoodBtns() f:Show()
+    f.editBox:SetFocus()
+    f.editBox:HighlightText()
+    RefreshMoodBtns()
+    f:Show()
 end
 
 -- ================================================================
--- 3.  RECHTSKLICK-MENÜ
+-- 3.  RIGHT-CLICK MENUS
 -- ================================================================
 
 local function MoodMenuLabel(entry)
     if not entry then return L["MENU_ADD"] end
-    local m = MOOD[entry.mood] or MOOD.neutral
-    return string.format(L["MENU_EDIT"], "|cff"..m.hex..m.label.."|r")
+    local mood = PD:GetMood(entry.mood)
+    return string.format(L["MENU_EDIT"], "|cff" .. mood.hex .. L[mood.labelKey] .. "|r")
 end
 
-local function InjectUnitMenu(_, rootDescription, contextData)
+local function IsPlayerName(name)
+    local me = UnitName("player")
+    return not PD.IsSecret(me) and name == me
+end
+
+-- Adds the "PlayerDossier" section (add/edit note, remove) to a menu.
+-- All callbacks go through securecallfunction so Blizzard's menu code
+-- isn't tainted by ours.
+local function AddDossierMenu(root, name, realm, class, guid)
+    local entry = PD:GetEntry(name, realm)
+    root:CreateDivider()
+    root:CreateTitle("|cff9B82F3PlayerDossier|r")
+    root:CreateButton(MoodMenuLabel(entry), function()
+        securecallfunction(PD.OpenNoteDialog, PD, name, realm, class, guid,
+            entry and entry.mood or "positive")
+    end)
+    if entry then
+        root:CreateButton(L["MENU_REMOVE"], function()
+            securecallfunction(PD.RemoveEntry, PD, name, realm)
+            if PD.mainFrame and PD.mainFrame:IsShown() then
+                securecallfunction(PD.RefreshMainWindow, PD)
+            end
+        end)
+    end
+end
+
+-- Unit menus (unit frames, party/raid frames, target, ...)
+local function InjectUnitMenu(_, root, contextData)
     local unit = contextData and contextData.unit
     if not unit then return end
     local ok1, isPlayer = pcall(UnitIsPlayer, unit)
     local ok2, isSelf   = pcall(UnitIsUnit, unit, "player")
     if not ok1 or not isPlayer or (ok2 and isSelf) then return end
     local name, realm, ok = PD:SafeUnitName(unit)
-    if not ok or not name then return end  -- Name/Realm derzeit nicht lesbar (z.B. aktives PvP-Match)
-    realm = (realm and realm ~= "") and realm or PD.GetMyRealm()
+    if not ok or not name then return end   -- name unreadable right now (e.g. active PvP match)
     local _, engClass = UnitClass(unit)
-    local guid        = UnitGUID(unit)
-    local entry       = PD:GetEntry(name, realm)
-    rootDescription:CreateDivider()
-    rootDescription:CreateTitle("|cff9B82F3PlayerDossier|r")
-    rootDescription:CreateButton(MoodMenuLabel(entry), function()
-        securecallfunction(PD.OpenNoteDialog, PD, name, realm, engClass, guid, entry and entry.mood or "positive")
-    end)
-    if entry then
-        rootDescription:CreateButton(L["MENU_REMOVE"], function()
-            securecallfunction(PD.RemoveEntry, PD, name, realm)
-            if PD.mainFrame and PD.mainFrame:IsShown() then
-                securecallfunction(PD.RefreshMainWindow, PD)
-            end
-        end)
-    end
+    AddDossierMenu(root, name, PD.NormRealm(realm), engClass, UnitGUID(unit))
 end
 
-local function InjectChatMenu(_, rootDescription, contextData)
+-- Chat roster / guild menus: contextData.name / .server
+local function InjectChatMenu(_, root, contextData)
     local name  = contextData and contextData.name
     local realm = contextData and contextData.server
-    if type(issecretvalue) == "function" and (issecretvalue(name) or issecretvalue(realm)) then
-        return  -- Name/Realm derzeit nicht lesbar (z.B. aktives PvP-Match)
-    end
-    if not name then return end
-    local ok1, myName = pcall(UnitName, "player")
-    if ok1 and not (type(issecretvalue) == "function" and issecretvalue(myName)) and name == myName then return end
-    realm = (realm and realm ~= "") and realm or PD.GetMyRealm()
-    local entry = PD:GetEntry(name, realm)
-    local isIgn = PD.IL_IsIgnored and PD:IL_IsIgnored(name, realm)
+    if PD.IsSecret(name) or PD.IsSecret(realm) then return end   -- e.g. active PvP match
+    if not name or IsPlayerName(name) then return end
+    realm = PD.NormRealm(realm)
 
-    rootDescription:CreateDivider()
-    rootDescription:CreateTitle("|cff9B82F3PlayerDossier|r")
+    AddDossierMenu(root, name, realm)
 
-    rootDescription:CreateButton(MoodMenuLabel(entry), function()
-        securecallfunction(PD.OpenNoteDialog, PD, name, realm,
-            entry and entry.class, entry and entry.guid,
-            entry and entry.mood or "positive")
-    end)
-    if entry then
-        rootDescription:CreateButton(L["MENU_REMOVE"], function()
-            securecallfunction(PD.RemoveEntry, PD, name, realm)
-        end)
-    end
-
-    if isIgn then
-        rootDescription:CreateButton(string.format(L["MENU_UNIGNORE_PLAYER"], name), function()
+    if PD:IL_IsIgnored(name, realm) then
+        root:CreateButton(string.format(L["MENU_UNIGNORE_PLAYER"], name), function()
             securecallfunction(PD.IL_Remove, PD, name, realm)
         end)
     else
-        rootDescription:CreateButton(string.format(L["MENU_IGNORE_PLAYER"], name), function()
+        root:CreateButton(string.format(L["MENU_IGNORE_PLAYER"], name), function()
             securecallfunction(PD.IL_PromptIgnore, PD, name, realm)
         end)
     end
 end
 
-local UNIT_MENUS = {
-    "MENU_UNIT_PLAYER","MENU_UNIT_PARTY","MENU_UNIT_RAID",
-    "MENU_UNIT_RAID_PLAYER","MENU_UNIT_FRIEND","MENU_UNIT_FRIEND_OFFLINE",
-    "MENU_UNIT_GUILD","MENU_UNIT_TARGET",
-    "MENU_UNIT_RECENT_ALLY",
-}
-for _, tag in ipairs(UNIT_MENUS) do
-    pcall(Menu.ModifyMenu, tag, InjectUnitMenu)
-end
-Menu.ModifyMenu("MENU_UNIT_CHAT_ROSTER", InjectChatMenu)
-pcall(Menu.ModifyMenu, "MENU_UNIT_GUILD", InjectChatMenu)
-
--- ----------------------------------------------------------------
--- Social-Frame-Hook (Freundesliste + Kürzliche Verbündete)
--- Liest Name/Realm/Klasse aus allen bekannten contextData-Formaten.
--- ----------------------------------------------------------------
-local function InjectSocialMenu(_, rootDescription, contextData)
+-- Friends list / recent allies. Reads name/realm/class from every known
+-- contextData format.
+local function InjectSocialMenu(_, root, contextData)
     if not contextData then return end
 
     local name, realm, class
 
-    -- Format A: Kürzliche Verbündete → characterData-Objekt
-    if contextData.characterData then
-        local cd = contextData.characterData
+    -- Format A: recent allies → characterData
+    local cd = contextData.characterData
+    if cd then
         name  = cd.name
         realm = cd.realm
         class = cd.classFilename or cd.className
     end
 
-    -- Format B: name/server direkt im contextData
+    -- Format B: name/server directly in contextData
     if not name and contextData.name then
         name  = contextData.name
         realm = contextData.server or contextData.realm
     end
 
-    -- Format C: unit-Token (z.B. friend1…friend10)
-    if not name and contextData.unit then
-        local u = contextData.unit
-        local ok, isPlayer = pcall(UnitIsPlayer, u)
-        if ok and isPlayer and not UnitIsUnit(u, "player") then
-            local n, r, okName = PD:SafeUnitName(u)
-            if okName and n then
-                name  = n
-                realm = r
-                local _, engClass = UnitClass(u)
-                class = engClass
-            end
-        end
-    end
-
-    if type(issecretvalue) == "function" and (issecretvalue(name) or issecretvalue(realm)) then
-        return  -- Name/Realm derzeit nicht lesbar (z.B. aktives PvP-Match)
-    end
+    -- Format C: unit token only (friend1…friend10) → already covered by
+    -- InjectUnitMenu, don't add the section twice.
     if not name then return end
-    local okMe, myName = pcall(UnitName, "player")
-    if okMe and not (type(issecretvalue) == "function" and issecretvalue(myName)) and name == myName then return end
-    realm = (realm and realm ~= "") and realm or PD.GetMyRealm()
 
-    -- Nicht duplizieren wenn InjectUnitMenu es bereits abgedeckt hat
-    if contextData.unit and not contextData.characterData and not contextData.name then
-        return
-    end
+    if PD.IsSecret(name) or PD.IsSecret(realm) then return end   -- e.g. active PvP match
+    if IsPlayerName(name) then return end
+    realm = PD.NormRealm(realm)
 
     local entry = PD:GetEntry(name, realm)
-    rootDescription:CreateDivider()
-    rootDescription:CreateTitle("|cff9B82F3PlayerDossier|r")
-    rootDescription:CreateButton(MoodMenuLabel(entry), function()
-        local useClass = class or (entry and entry.class)
-        securecallfunction(PD.OpenNoteDialog, PD, name, realm, useClass,
-            entry and entry.guid, entry and entry.mood or "positive")
-    end)
-    if entry then
-        rootDescription:CreateButton(L["MENU_REMOVE"], function()
-            securecallfunction(PD.RemoveEntry, PD, name, realm)
-            if PD.mainFrame and PD.mainFrame:IsShown() then
-                securecallfunction(PD.RefreshMainWindow, PD)
-            end
-        end)
-    end
+    AddDossierMenu(root, name, realm, class or (entry and entry.class), entry and entry.guid)
 end
 
-for _, tag in ipairs({
-    "MENU_UNIT_FRIEND", "MENU_UNIT_FRIEND_OFFLINE", "MENU_UNIT_RECENT_ALLY",
-}) do
-    pcall(Menu.ModifyMenu, tag, InjectSocialMenu)
+-- Registration order matters: for the friend menus the unit injector
+-- runs first, then the social one.
+local MENU_INJECTORS = {
+    { InjectUnitMenu, {
+        "MENU_UNIT_PLAYER", "MENU_UNIT_PARTY", "MENU_UNIT_RAID", "MENU_UNIT_RAID_PLAYER",
+        "MENU_UNIT_FRIEND", "MENU_UNIT_FRIEND_OFFLINE", "MENU_UNIT_GUILD",
+        "MENU_UNIT_TARGET", "MENU_UNIT_RECENT_ALLY",
+    } },
+    { InjectChatMenu,   { "MENU_UNIT_CHAT_ROSTER", "MENU_UNIT_GUILD" } },
+    { InjectSocialMenu, { "MENU_UNIT_FRIEND", "MENU_UNIT_FRIEND_OFFLINE", "MENU_UNIT_RECENT_ALLY" } },
+}
+for _, group in ipairs(MENU_INJECTORS) do
+    for _, tag in ipairs(group[2]) do
+        pcall(Menu.ModifyMenu, tag, group[1])
+    end
 end
 
 -- ================================================================
--- 4.  WHISPER HELPER
+-- 4.  WHISPER
 -- ================================================================
 
 local function WhisperPlayer(name, realm)
-    -- Realm-Vergleich case-insensitive und mit normalisierten Leerzeichen
-    local myRealm = PD.GetMyRealm() or ""
-    local entryRealm = realm or ""
-    local crossRealm = entryRealm ~= ""
-        and entryRealm:lower():gsub("%s", "") ~= myRealm:lower():gsub("%s", "")
+    -- Compare realms ignoring case and spaces ("Tarren Mill" = "TarrenMill")
+    local entryRealm = (realm or ""):gsub("%s", "")
+    local crossRealm = entryRealm ~= "" and entryRealm:lower() ~= PD.GetMyRealm():gsub("%s", ""):lower()
 
-    local target = crossRealm and (name .. "-" .. entryRealm) or name
-
-    -- ChatFrame_OpenChat ist zuverlässiger als direktes EditBox-Manipulieren
-    ChatFrame_OpenChat("/w " .. target .. " ", DEFAULT_CHAT_FRAME)
+    -- ChatFrame_OpenChat is more reliable than poking the edit box directly
+    ChatFrame_OpenChat("/w " .. (crossRealm and (name .. "-" .. entryRealm) or name) .. " ", DEFAULT_CHAT_FRAME)
 end
 
 -- ================================================================
--- 5a. COPY POPUP
+-- 5.  MAIN WINDOW WITH TABS
 -- ================================================================
 
-function PD:ShowCopyPopup(text)
-    if not PD._copyPopup then
-        local f = CreateFrame("Frame", "PDCopyPopup", UIParent, "BasicFrameTemplateWithInset")
-        f:SetSize(320, 70)
-        f:SetFrameStrata("TOOLTIP")
-        f:SetMovable(true) f:EnableMouse(true)
-        f:RegisterForDrag("LeftButton")
-        f:SetScript("OnDragStart", f.StartMoving)
-        f:SetScript("OnDragStop",  f.StopMovingOrSizing)
-        f:SetClampedToScreen(true)
-        f:Hide()
-        f.TitleText:SetText(L["COPY_POPUP_TITLE"])
-        f:SetScript("OnKeyDown", function(self, key)
-            if key == "ESCAPE" then self:Hide() end
-        end)
-        f:SetPropagateKeyboardInput(true)
-
-        local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-        eb:SetSize(280, 20)
-        eb:SetPoint("CENTER", f.InsetBg, "CENTER", 0, 0)
-        eb:SetAutoFocus(true)
-        eb:SetScript("OnEscapePressed", function() f:Hide() end)
-        eb:SetScript("OnEnterPressed",  function() f:Hide() end)
-        eb:SetScript("OnKeyDown", function(_, key)
-            if key == "C" and IsControlKeyDown() then
-                C_Timer.After(0, function() f:Hide() end)
-            end
-        end)
-        f.editBox = eb
-        PD._copyPopup = f
-    end
-    local f = PD._copyPopup
-    f:SetPoint("CENTER")
-    f.editBox:SetText(text)
-    f.editBox:HighlightText()
-    f.editBox:SetFocus()
-    f:Show()
-end
-
--- ================================================================
--- 5.  HAUPT-FENSTER MIT TABS
--- ================================================================
+-- Tab definition: label key, panel builder (lazy, optional), refresh function
+local TABS = {
+    { label = "TAB_PLAYERS", refresh = "RefreshMainWindow" },
+    { label = "TAB_IGNORE",  build = "BuildIgnorePanel",  refresh = "RefreshIgnorePanel" },
+    { label = "TAB_HISTORY", build = "BuildHistoryPanel", refresh = "RefreshHistoryPanel" },
+    { label = "TAB_OPTIONS", build = "BuildOptionsPanel", refresh = "RefreshOptionsPanel" },
+}
 
 local function MakePanel(parent)
     local p = CreateFrame("Frame", nil, parent)
     p:SetPoint("TOPLEFT",     parent.InsetBg, "TOPLEFT",     0, -18)
-    p:SetPoint("BOTTOMRIGHT", parent.InsetBg, "BOTTOMRIGHT",  0,   0)
+    p:SetPoint("BOTTOMRIGHT", parent.InsetBg, "BOTTOMRIGHT", 0,   0)
     p:Hide()
     return p
 end
@@ -428,55 +327,46 @@ function PD:BuildUI()
     local f = CreateFrame("Frame", "PDMainFrame", UIParent, "BasicFrameTemplateWithInset")
     f:SetSize(620, 460)
     f:SetPoint("CENTER")
-    f:SetMovable(true) f:EnableMouse(true)
-    f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", f.StartMoving)
-    f:SetScript("OnDragStop",  f.StopMovingOrSizing)
-    f:SetClampedToScreen(true)
-    f:SetFrameStrata("DIALOG") f:Hide()
+    PD:MakeDraggable(f)
+    f:SetFrameStrata("DIALOG")
+    f:Hide()
 
-    -- Titelleiste komplett durchziehen (CloseButton liegt standardmäßig drüber)
+    -- Stretch the title across the whole bar (the close button sits on top by default)
     f.TitleText:SetText("PlayerDossier")
     f.TitleText:ClearAllPoints()
     f.TitleText:SetPoint("LEFT",  f.TitleBg, "LEFT",  5, 0)
     f.TitleText:SetPoint("RIGHT", f.TitleBg, "RIGHT", -5, 0)
     f.TitleText:SetJustifyH("CENTER")
 
-    -- ESC schliesst das Fenster (WoW-Standard über UISpecialFrames)
+    -- ESC closes the window (WoW standard via UISpecialFrames)
     tinsert(UISpecialFrames, "PDMainFrame")
 
-    -- Subtitle
     f.subtitle = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     f.subtitle:SetPoint("TOP", f.InsetBg, "TOP", 0, -4)
 
-    -- Vier Panels
-    local p1 = MakePanel(f)
-    local p2 = MakePanel(f)
-    local p3 = MakePanel(f)
-    local p4 = MakePanel(f)
-    f.panels = { p1, p2, p3, p4 }
+    -- One panel per tab (PD.panel1 … PD.panel4)
+    f.panels = {}
+    for i = 1, #TABS do
+        f.panels[i] = MakePanel(f)
+        PD["panel" .. i] = f.panels[i]
+    end
 
-    -- Tab-Buttons (PanelTabButtonTemplate – klassisches WoW-Look)
-    local tabLabels = { L["TAB_PLAYERS"], L["TAB_IGNORE"], L["TAB_HISTORY"], L["TAB_OPTIONS"] }
+    -- Tab buttons (PanelTabButtonTemplate, classic WoW look)
     f.tabs = {}
-    -- Tabs: erst alle erstellen, dann auf breitesten Text angleichen
-    for i, label in ipairs(tabLabels) do
-        local tab = CreateFrame("Button", "PDMainTab"..i, f, "PanelTabButtonTemplate")
-        tab:SetText(label)
+    for i, def in ipairs(TABS) do
+        local tab = CreateFrame("Button", "PDMainTab" .. i, f, "PanelTabButtonTemplate")
+        tab:SetText(L[def.label])
         tab:SetID(i)
         tab:SetScript("OnClick", function() PD:SelectTab(i) end)
         f.tabs[i] = tab
     end
 
-    -- Textbreite korrekt messen via GetStringWidth (vor Rendering verfügbar)
+    -- All tabs get the width of the widest label (+30px padding so no text is cut off)
     local maxW = 80
     for _, tab in ipairs(f.tabs) do
         local fs = tab:GetFontString()
-        if fs then
-            maxW = math.max(maxW, fs:GetStringWidth())
-        end
+        if fs then maxW = math.max(maxW, fs:GetStringWidth()) end
     end
-    -- 30px Padding links+rechts damit Text nicht abgeschnitten wird
     maxW = math.ceil(maxW) + 30
 
     for i, tab in ipairs(f.tabs) do
@@ -485,79 +375,45 @@ function PD:BuildUI()
         if i == 1 then
             tab:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 10, -28)
         else
-            tab:SetPoint("LEFT", f.tabs[i-1], "RIGHT", 2, 0)
+            tab:SetPoint("LEFT", f.tabs[i - 1], "RIGHT", 2, 0)
         end
     end
-    PanelTemplates_SetNumTabs(f, 4)
+    PanelTemplates_SetNumTabs(f, #TABS)
 
-    PD.mainFrame  = f
-    PD.panel1     = p1   -- Players
-    PD.panel2     = p2   -- Ignore List
-    PD.panel3     = p3   -- Group History
-    PD.panel4     = p4   -- Options
+    PD.mainFrame = f
 
-    -- Panel-Inhalte bauen
-    PD:BuildPlayersPanel(p1)
+    PD:BuildPlayersPanel(PD.panel1)
     PD:BuildNoteDialog()
 
     f:SetScript("OnShow", function() PD:SelectTab(PD._activeTab or 1) end)
+
+    PD:RunBuildCallbacks()
 end
 
--- ----------------------------------------------------------------
 function PD:SelectTab(n)
     local f = PD.mainFrame
     if not f then return end
     PD._activeTab = n
     PanelTemplates_SetTab(f, n)
-    -- Tab-Text bleibt zentriert (PanelTabButtonTemplate verschiebt ihn beim Aktivieren)
+
+    -- Keep the tab text centered (PanelTabButtonTemplate shifts it when selected)
     for i, tab in ipairs(f.tabs) do
         local fs = tab:GetFontString()
         if fs then fs:SetPoint("CENTER", tab, "CENTER", 0, i == n and 0 or 1) end
     end
     for i, panel in ipairs(f.panels) do
-        if i == n then panel:Show() else panel:Hide() end
+        panel:SetShown(i == n)
     end
-    -- Tab 1 = Players, Tab 2 = Ignore List, Tab 3 = History, Tab 4 = Options
-    if n == 1 then
-        PD:RefreshMainWindow()
-    elseif n == 2 then
-        if PD.BuildIgnorePanel and not PD._il_built then
-            PD:BuildIgnorePanel(PD.panel2)
-            PD._il_built = true
-        end
-        if PD.RefreshIgnorePanel then PD:RefreshIgnorePanel() end
-    elseif n == 3 then
-        if PD.BuildHistoryPanel and not PD._hist_built then
-            PD:BuildHistoryPanel(PD.panel3)
-            PD._hist_built = true
-        end
-        if PD.RefreshHistoryPanel then PD:RefreshHistoryPanel() end
-    elseif n == 4 then
-        if PD.BuildOptionsPanel and not PD._opt_built then
-            PD:BuildOptionsPanel(PD.panel4)
-            PD._opt_built = true
-        end
-        if PD.RefreshOptionsPanel then PD:RefreshOptionsPanel() end
-    end
-    -- Subtitle
-    if n == 1 then
-        local c = PD:Count()
-        f.subtitle:SetText(c == 0 and L["SUB_NO_ENTRIES"] or (c == 1 and L["SUB_1_ENTRY"] or string.format(L["SUB_N_ENTRIES"], c)))
-    elseif n == 2 then
-        local c = PD.IL_Count and PD:IL_Count() or 0
-        f.subtitle:SetText(c == 0 and L["SUB_NO_IGNORED"] or
-            (c == 1 and L["SUB_1_IGNORED"] or string.format(L["SUB_N_IGNORED"], c)))
-    elseif n == 3 then
-        local c = PD.GH_Count and PD:GH_Count() or 0
-        f.subtitle:SetText(c == 0 and L["SUB_NO_HISTORY"] or
-            (c == 1 and L["SUB_1_HISTORY"] or string.format(L["SUB_N_HISTORY"], c)))
-    elseif n == 4 then
-        f.subtitle:SetText(L["OPT_SEC_MESSAGES"])
-    end
-end
 
--- Compat: andere Module rufen diese Funktion auf
-function PD:ToggleMainWindow()       PD:OpenOnTab(1) end
+    -- Build lazily on first visit, then refresh (refreshing also sets the subtitle)
+    local def, panel = TABS[n], f.panels[n]
+    if def.build and not panel._built then
+        panel._built = true
+        PD[def.build](PD, panel)
+    end
+    PD[def.refresh](PD)
+    if n == 4 then PD:SetSubtitle(L["TAB_OPTIONS"]) end
+end
 
 function PD:OpenOnTab(n)
     if not PD.mainFrame then return end
@@ -569,222 +425,129 @@ function PD:OpenOnTab(n)
     end
 end
 
+function PD:ToggleMainWindow() PD:OpenOnTab(1) end
+
 -- ================================================================
--- 6.  PANEL 1: PLAYERS
+-- 6.  PLAYERS PANEL
 -- ================================================================
 
 local GetRow, HideAllRows = PD:NewRowPool()
 
--- Spaltenoffsets Players-Panel (gemeinsam mit Ignorierliste/Verlauf, PD.COL)
-local PL_COL_MOOD  = 4              -- Emoji (nur hier)
-local PL_COL_NAME  = PD.COL.NAME
-local PL_COL_REALM = PD.COL.REALM
-local PL_COL_ROLE  = PD.COL.ROLE
-local PL_COL_SINCE = PD.COL.SEIT
-local PL_COL_NOTE  = PD.COL.LAST
-local PL_ROW_H     = 52   -- Zeilenhöhe für 48px Emoji
-local PL_ROW_PAD   = 2
+local COL_MOOD  = 4    -- mood icon (Players tab only)
+local COL_NAME  = PD.COL.NAME
+local COL_REALM = PD.COL.REALM
+local COL_ROLE  = PD.COL.ROLE
+local COL_SINCE = PD.COL.SINCE
+local COL_NOTE  = PD.COL.LAST
+local ROW_H     = 52   -- fits the 48px mood icon
+local ROW_PAD   = 2
 
 function PD:BuildPlayersPanel(panel)
-    -- Spaltenköpfe
-    local heads = {
-        { text=L["PL_COL_NAME"],  x=PL_COL_NAME  },
-        { text=L["PL_COL_REALM"], x=PL_COL_REALM },
-        { text=L["PL_COL_ROLE"],  x=PL_COL_ROLE  },
-        { text=L["PL_COL_SINCE"], x=PL_COL_SINCE },
-        { text=L["PL_COL_NOTE"],  x=PL_COL_NOTE  },
-    }
-    PD:BuildColumnHeaders(panel, heads)
+    panel.scrollContent = PD:BuildListPanel(panel, {
+        heads = {
+            { text = L["PL_COL_NAME"],  x = COL_NAME  },
+            { text = L["PL_COL_REALM"], x = COL_REALM },
+            { text = L["PL_COL_ROLE"],  x = COL_ROLE  },
+            { text = L["PL_COL_SINCE"], x = COL_SINCE },
+            { text = L["PL_COL_NOTE"],  x = COL_NOTE  },
+        },
+        scroll     = "PDScrollFrame",
+        content    = "PDScrollContent",
+        clearBtn   = "PDClearPlayersBtn",
+        clearPopup = "PD_CONFIRM_CLEAR_PLAYERS",
+    })
+end
 
-    -- Scrollframe
-    local sf = CreateFrame("ScrollFrame", "PDScrollFrame", panel, "UIPanelScrollFrameTemplate")
-    sf:SetPoint("TOPLEFT",     panel, "TOPLEFT",     4,  -22)
-    sf:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -26, 32)
-    local content = CreateFrame("Frame", "PDScrollContent", sf)
-    content:SetWidth(sf:GetWidth())
-    content:SetHeight(1)
-    sf:SetScrollChild(content)
-    panel.scrollContent = content
+local function FillPlayerRow(row, e)
+    if not row.moodTex then
+        row.moodTex = row:CreateTexture(nil, "ARTWORK")
+        row.moodTex:SetSize(48, 48)
+        row.moodTex:SetPoint("LEFT", row, "LEFT", COL_MOOD, 0)
+    end
+    row.moodTex:SetTexture(PD:GetMood(e.mood).tex)
 
-    -- "Alle entfernen"-Button
-    local clearBtn = CreateFrame("Button", "PDClearPlayersBtn", panel, "UIPanelButtonTemplate")
-    clearBtn:SetSize(120, 22)
-    clearBtn:SetText(L["BTN_CLEAR_ALL"])
-    clearBtn:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 4, 6)
-    clearBtn:SetScript("OnClick", function()
-        StaticPopup_Show("PD_CONFIRM_CLEAR_PLAYERS")
+    local nameLabel = PD:RowLabel(row, "nameLabel", COL_NAME, COL_REALM, "GameFontNormalLarge")
+    PD:ApplyNameColor(nameLabel, e.class)
+    nameLabel:SetText(e.name or "?")
+
+    PD:RowLabel(row, "realmLabel", COL_REALM, COL_ROLE, nil, 0.78, 0.78, 0.78)
+        :SetText(e.realm or PD.GetMyRealm())
+
+    -- Role (from the group history, if known)
+    local hEntry = PD:GH_GetEntry(e.name, e.realm)
+    PD:RowLabel(row, "roleLabel", COL_ROLE, COL_SINCE):SetText(PD:GH_RoleText(hEntry and hEntry.role))
+
+    PD:RowLabel(row, "sinceLabel", COL_SINCE, COL_NOTE, nil, 0.78, 0.78, 0.78)
+        :SetText(PD:TimeAgo(e.timestamp))
+
+    local noteLabel = PD:RowLabel(row, "noteLabel", COL_NOTE, nil, nil, 0.60, 0.60, 0.60)
+    noteLabel:SetWordWrap(false)
+    noteLabel:SetText((e.note and e.note ~= "") and e.note or "|cff444444-|r")
+
+    local eName, eRealm, eClass, eGuid, eMood = e.name, e.realm, e.class, e.guid, e.mood
+    PD:SetRowMenu(row, function(root)
+        root:CreateTitle("|cff9B82F3" .. eName .. "|r")
+
+        root:CreateButton(L["BTN_EDIT"], function()
+            PD:OpenNoteDialog(eName, eRealm, eClass, eGuid, eMood)
+        end)
+
+        local isIgn = PD:IL_IsIgnored(eName, eRealm)
+        if isIgn then
+            -- Whispering ignored players isn't possible (disabled entry)
+            root:CreateButton("|cffaaaaaa" .. L["BTN_WHISPER"] .. " (" .. L["IL_IGNORED_HINT"] .. ")|r", function() end)
+        else
+            root:CreateButton(L["BTN_WHISPER"], function() WhisperPlayer(eName, eRealm) end)
+        end
+
+        root:CreateButton(isIgn and L["BTN_UNIGNORE"] or L["BTN_IGNORE"], function()
+            if isIgn then
+                PD:IL_Remove(eName, eRealm)
+            else
+                PD:IL_PromptIgnore(eName, eRealm)
+            end
+            PD:RefreshMainWindow()
+        end)
+
+        root:CreateDivider()
+        root:CreateButton(L["BTN_COPY_NAME"], function()
+            PD:ShowCopyPopup(eName .. "-" .. eRealm)
+        end)
+        root:CreateButton("|cffff4444" .. L["MENU_REMOVE"] .. "|r", function()
+            PD:RemoveEntry(eName, eRealm)
+            PD:RefreshMainWindow()
+        end)
     end)
 end
 
 function PD:RefreshMainWindow()
-    local myRealm = PD.GetMyRealm()
-    local f  = PD.mainFrame
     local p1 = PD.panel1
     if not p1 then return end
     local content = p1.scrollContent
     HideAllRows()
-    if p1.emptyLabel then p1.emptyLabel:Hide() end
+    PD:HideEmptyLabel(p1)
 
-    local MOOD_ORDER = { positive=1, neutral=2, negative=3 }
-    local entries = PD:GetAllEntries()
+    -- Sort by mood (good → neutral → bad), then by name
     local list = {}
-    for key, entry in pairs(entries) do list[#list+1] = {key=key, e=entry} end
+    for _, entry in pairs(PD:GetAllEntries()) do list[#list + 1] = entry end
     table.sort(list, function(a, b)
-        local ma, mb = MOOD_ORDER[a.e.mood] or 2, MOOD_ORDER[b.e.mood] or 2
+        local ma, mb = PD:GetMood(a.mood).order, PD:GetMood(b.mood).order
         if ma ~= mb then return ma < mb end
-        return (a.e.name or ""):lower() < (b.e.name or ""):lower()
+        return (a.name or ""):lower() < (b.name or ""):lower()
     end)
 
     local count = #list
-    if f then
-        f.subtitle:SetText(count==0 and L["SUB_NO_ENTRIES"] or
-            (count==1 and L["SUB_1_ENTRY"] or string.format(L["SUB_N_ENTRIES"], count)))
-    end
+    PD:SetSubtitle(PD.CountText(count, "SUB_NO_ENTRIES", "SUB_1_ENTRY", "SUB_N_ENTRIES"))
 
     if count == 0 then
-        if not p1.emptyLabel then
-            p1.emptyLabel = content:CreateFontString(nil,"OVERLAY","GameFontDisable")
-            p1.emptyLabel:SetPoint("TOP", content, "TOP", 0, -60)
-            p1.emptyLabel:SetText(L["EMPTY_PLAYERS"])
-            p1.emptyLabel:SetJustifyH("CENTER")
-        end
-        p1.emptyLabel:Show()
-        content:SetHeight(160)
+        PD:ShowEmptyLabel(p1, content, L["EMPTY_PLAYERS"], 60, 160)
         return
     end
 
-    local rowW = content:GetWidth() - 4
-    local yOff = -PL_ROW_PAD
-
-    for i, item in ipairs(list) do
-        local e   = item.e
+    for i, e in ipairs(list) do
         local row = GetRow(content)
-        row:SetSize(rowW, PL_ROW_H)
-        row:SetPoint("TOPLEFT", content, "TOPLEFT", 2, yOff)
-        row:SetBackdrop({bgFile="Interface/Tooltips/UI-Tooltip-Background"})
-        if i%2==0 then row:SetBackdropColor(0.08,0.08,0.10,0.55)
-        else            row:SetBackdropColor(0.13,0.13,0.17,0.55) end
-
-        -- Mood-Emoji
-        if not row.moodTex then
-            row.moodTex = row:CreateTexture(nil,"ARTWORK")
-            row.moodTex:SetSize(48, 48)
-            row.moodTex:SetPoint("LEFT", row,"LEFT", PL_COL_MOOD, 0)
-        end
-        local m = MOOD[e.mood] or MOOD.neutral
-        row.moodTex:SetTexture(m.tex)
-
-        -- Name
-        if not row.nameLabel then
-            row.nameLabel = row:CreateFontString(nil,"OVERLAY","GameFontNormalLarge")
-            row.nameLabel:SetPoint("LEFT", row,"LEFT", PL_COL_NAME, 0)
-            row.nameLabel:SetWidth(PL_COL_REALM - PL_COL_NAME - 4)
-            row.nameLabel:SetJustifyH("LEFT")
-        end
-        local cc = PD:OPT_Get("classColors") and RAID_CLASS_COLORS and RAID_CLASS_COLORS[e.class]
-        if cc then row.nameLabel:SetTextColor(cc.r,cc.g,cc.b)
-        else       row.nameLabel:SetTextColor(1,1,1) end
-        row.nameLabel:SetText(e.name or "?")
-
-        -- Realm
-        if not row.realmLabel then
-            row.realmLabel = row:CreateFontString(nil,"OVERLAY","GameFontNormal")
-            row.realmLabel:SetPoint("LEFT", row,"LEFT", PL_COL_REALM, 0)
-            row.realmLabel:SetWidth(PL_COL_ROLE - PL_COL_REALM - 4)
-            row.realmLabel:SetJustifyH("LEFT")
-            row.realmLabel:SetTextColor(0.78,0.78,0.78)
-        end
-        row.realmLabel:SetText(
-            (e.realm and e.realm ~= myRealm) and e.realm or myRealm
-        )
-
-        -- Rolle (aus Gruppenverlauf, falls bekannt)
-        if not row.roleLabel then
-            row.roleLabel = row:CreateFontString(nil,"OVERLAY","GameFontNormal")
-            row.roleLabel:SetPoint("LEFT", row,"LEFT", PL_COL_ROLE, 0)
-            row.roleLabel:SetWidth(PL_COL_SINCE - PL_COL_ROLE - 4)
-            row.roleLabel:SetJustifyH("LEFT")
-        end
-        local hEntry = PD.GH_GetEntry and PD:GH_GetEntry(e.name, e.realm)
-        row.roleLabel:SetText(PD.GH_RoleText and PD:GH_RoleText(hEntry and hEntry.role) or "")
-
-        -- Seit (Tage)
-        if not row.sinceLabel then
-            row.sinceLabel = row:CreateFontString(nil,"OVERLAY","GameFontNormal")
-            row.sinceLabel:SetPoint("LEFT", row,"LEFT", PL_COL_SINCE, 0)
-            row.sinceLabel:SetWidth(PL_COL_NOTE - PL_COL_SINCE - 4)
-            row.sinceLabel:SetJustifyH("LEFT")
-            row.sinceLabel:SetTextColor(0.78,0.78,0.78)
-        end
-        row.sinceLabel:SetText(PD:TimeAgo(e.timestamp))
-
-        -- Notiz
-        if not row.noteLabel then
-            row.noteLabel = row:CreateFontString(nil,"OVERLAY","GameFontNormal")
-            row.noteLabel:SetPoint("LEFT",  row,"LEFT",  PL_COL_NOTE, 0)
-            row.noteLabel:SetPoint("RIGHT", row,"RIGHT", -6, 0)
-            row.noteLabel:SetJustifyH("LEFT")
-            row.noteLabel:SetTextColor(0.60,0.60,0.60)
-            row.noteLabel:SetWordWrap(false)
-        end
-        local noteText = (e.note and e.note ~= "") and e.note or "|cff444444-|r"
-        row.noteLabel:SetText(noteText)
-
-        -- Rechtsklick-Menü
-        row:EnableMouse(true)
-        local eName, eRealm, eClass, eGuid, eMood = e.name, e.realm, e.class, e.guid, e.mood
-        row:SetScript("OnMouseUp", function(self, btn)
-            if btn ~= "RightButton" then return end
-            MenuUtil.CreateContextMenu(UIParent, function(_, root)
-                root:CreateTitle("|cff9B82F3"..eName.."|r")
-
-                root:CreateButton(L["BTN_EDIT"], function()
-                    PD:OpenNoteDialog(eName, eRealm, eClass, eGuid, eMood)
-                end)
-
-                local isIgn = PD.IL_IsIgnored and PD:IL_IsIgnored(eName, eRealm)
-
-                if not isIgn then
-                    root:CreateButton(L["BTN_WHISPER"], function()
-                        WhisperPlayer(eName, eRealm)
-                    end)
-                else
-                    root:CreateButton("|cffaaaaaa"..L["BTN_WHISPER"].." ("..L["IL_IGNORED_HINT"]..")|r", function()
-                        -- Kein Flüstern möglich – Spieler ist ignoriert
-                    end)
-                end
-
-                root:CreateButton(isIgn and L["BTN_UNIGNORE"] or L["BTN_IGNORE"], function()
-                    if PD:IL_IsIgnored(eName, eRealm) then
-                        PD:IL_Remove(eName, eRealm)
-                    else
-                        PD:IL_PromptIgnore(eName, eRealm)
-                    end
-                    PD:RefreshMainWindow()
-                end)
-
-                root:CreateDivider()
-
-                root:CreateButton(L["BTN_COPY_NAME"], function()
-                    PD:ShowCopyPopup(eName .. "-" .. eRealm)
-                end)
-
-                root:CreateButton("|cffff4444"..L["MENU_REMOVE"].."|r", function()
-                    PD:RemoveEntry(eName, eRealm)
-                    PD:RefreshMainWindow()
-                end)
-            end)
-        end)
-
-        -- Hover-Highlight damit klar ist dass man rechtsklicken kann
-        if not row.hlTex then
-            row.hlTex = row:CreateTexture(nil, "HIGHLIGHT")
-            row.hlTex:SetAllPoints()
-            row.hlTex:SetColorTexture(1, 1, 1, 0.05)
-            row.hlTex:SetBlendMode("ADD")
-        end
-
-        yOff = yOff - PL_ROW_H - PL_ROW_PAD
+        PD:SetupRow(row, content, i, ROW_H, ROW_PAD, PD.ROW_TINT.default)
+        FillPlayerRow(row, e)
     end
-    content:SetHeight(math.abs(yOff) + PL_ROW_PAD)
+    PD:FinishList(content, count, ROW_H, ROW_PAD)
 end
