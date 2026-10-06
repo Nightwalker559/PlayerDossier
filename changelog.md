@@ -1,5 +1,13 @@
 # PlayerDossier – Changelog
 
+## [Unreleased]
+
+### New
+- LFG tooltip: the mood icon (good/neutral/bad) now appears directly next to the player's name in the Leader and Members lines of the group tooltip, not only in the PlayerDossier block at the bottom.
+
+### Fixed
+- LFG tooltip: dossier/ignore entries of players on other realms were not recognized when the group's member list gave the name without a realm. Names without a realm are now also matched by name only.
+
 ## [1.0.9] - 2026-09-20
 
 ### New

@@ -11,6 +11,20 @@ local L  = PD.L
 -- Cache: resultID → { ignored={name→realm}, dossier={name→realm} }
 local lfgIgnoreCache = {}
 
+-- Sucht in einer Tabelle { key → {name=…, realm=…} } case-insensitiv nach Namen
+local function FindByName(tbl, name)
+    local lname = name:lower()
+    for _, e in pairs(tbl) do
+        if e.name and e.name:lower() == lname then return e end
+    end
+end
+
+-- Stimmungs-Icon als Inline-Textur
+local function MoodIcon(mood)
+    local file = (mood == "positive") and "mood_good" or (mood == "negative") and "mood_bad" or "mood_neutral"
+    return string.format("|TInterface/AddOns/PlayerDossier/Media/%s.png:16:16|t", file)
+end
+
 -- ----------------------------------------------------------------
 -- Hilfsfunktion: Alle Mitglieder eines LFG-Eintrags prüfen
 -- ----------------------------------------------------------------
@@ -33,17 +47,33 @@ local function CheckResult(resultID)
     local function CheckMember(mName)
         if not mName then return end
         local name, realm = mName:match("^(.+)-([^%-]+)$")
+        local hasRealm = name ~= nil
         name  = name  or mName
         realm = realm or PD.GetMyRealm()
 
-        if PD:IL_IsIgnored(name, realm) and not entry.ignored[name] then
-            entry.hasIgnored      = true
-            entry.ignored[name]   = realm
+        -- Mitgliedsnamen kommen oft ohne Realm → dann auch nach reinem
+        -- Namen suchen (Spieler von anderen Realms wuerden sonst nie gefunden)
+        local ignRealm, dosRealm
+        if PD:IL_IsIgnored(name, realm) then
+            ignRealm = realm
+        elseif not hasRealm then
+            local e = FindByName(PD:IL_GetAll(), name)
+            ignRealm = e and e.realm
+        end
+        if PD:GetEntry(name, realm) then
+            dosRealm = realm
+        elseif not hasRealm then
+            local e = FindByName(PD:GetAllEntries(), name)
+            dosRealm = e and e.realm
         end
 
-        if PD:GetEntry(name, realm) and not entry.dossier[name] then
-            entry.hasDossier      = true
-            entry.dossier[name]   = realm
+        if ignRealm and not entry.ignored[name] then
+            entry.hasIgnored    = true
+            entry.ignored[name] = ignRealm
+        end
+        if dosRealm and not entry.dossier[name] then
+            entry.hasDossier    = true
+            entry.dossier[name] = dosRealm
         end
     end
 
@@ -84,17 +114,60 @@ end)
 local function HookLFGTooltip()
     -- LFGListSearchEntry_OnEnter ist die Funktion die den Tooltip befüllt
     -- Wir hooken sie um unsere Warnung anzuhängen
+    -- Entfernt Farb-/Textur-Codes, damit Zeilentext mit Spielernamen verglichen werden kann
+    local function StripCodes(s)
+        s = s:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+        s = s:gsub("|T.-|t", ""):gsub("|A.-|a", "")
+        return s
+    end
+
+    -- Setzt das Stimmungs-Icon direkt vor den Namen in den Mitgliederzeilen
+    -- (und der Leader-Zeile) des bestehenden Blizzard-/Raider.IO-Tooltips.
+    local function AnnotateMemberLines(entry)
+        local marks = {}   -- name:lower() → Icon
+        for name, realm in pairs(entry.dossier) do
+            local dEntry = PD:GetEntry(name, realm)
+            marks[name:lower()] = MoodIcon(dEntry and dEntry.mood)
+        end
+        for name, realm in pairs(entry.ignored) do
+            if not marks[name:lower()] then
+                local dEntry = PD:GetEntry(name, realm)
+                marks[name:lower()] = MoodIcon(dEntry and dEntry.mood or "negative")
+            end
+        end
+
+        for i = 2, GameTooltip:NumLines() do
+            for _, side in ipairs({ "Right", "Left" }) do
+                local fs   = _G["GameTooltipText" .. side .. i]
+                local text = fs and fs:GetText()
+                if text and not (issecretvalue and issecretvalue(text))
+                   and not text:find("PlayerDossier/Media", 1, true) then
+                    local plain = StripCodes(text)
+                    plain = plain:gsub("^.-:%s*", "")        -- "Leader: " Label entfernen
+                    plain = plain:gsub("%s*%b()%s*$", "")    -- "(Horde)" am Ende entfernen
+                    plain = strtrim(plain)
+                    plain = plain:match("^([^%s%-]+)%-[^%s%-]+$") or plain  -- Name-Realm → Name
+                    local icon = marks[plain:lower()]
+                    local pos  = icon and text:find(plain, 1, true)
+                    if pos then
+                        fs:SetText(text:sub(1, pos - 1) .. icon .. " " .. text:sub(pos))
+                        break
+                    end
+                end
+            end
+        end
+    end
+
     local function CheckAndWarnTooltip(frame)
         if not frame or not frame.resultID then return end
         local entry = CheckResult(frame.resultID)
         if not entry.hasIgnored and not entry.hasDossier then return end
 
+        AnnotateMemberLines(entry)
+
         local function AddPlayerLine(name, realm)
             local dEntry  = PD:GetEntry(name, realm)
-            local mood    = dEntry and dEntry.mood or "neutral"
-            local moodFile = (mood == "positive") and "mood_good" or (mood == "negative") and "mood_bad" or "mood_neutral"
-            local moodTex = string.format(
-                "|TInterface/AddOns/PlayerDossier/Media/%s.png:16:16|t", moodFile)
+            local moodTex = MoodIcon(dEntry and dEntry.mood)
             local line    = "  " .. moodTex .. " |cffffff88" .. name .. "|r"
             if dEntry and dEntry.note and dEntry.note ~= "" then
                 line = line .. " |cffaaaaaa– " .. dEntry.note .. "|r"
@@ -109,10 +182,7 @@ local function HookLFGTooltip()
             GameTooltip:AddLine("|cffff2e2e! " .. L["LFG_IGNORED_WARNING"] .. "|r")
             for name, realm in pairs(entry.ignored) do
                 local dEntry  = PD:GetEntry(name, realm)
-                local mood    = dEntry and dEntry.mood or "neutral"
-                local moodFile = (mood == "positive") and "mood_good" or (mood == "negative") and "mood_bad" or "mood_neutral"
-                local moodTex = string.format(
-                    "|TInterface/AddOns/PlayerDossier/Media/%s.png:16:16|t", moodFile)
+                local moodTex = MoodIcon(dEntry and dEntry.mood)
                 local line    = "  " .. moodTex .. " |cffff8888" .. name .. "|r"
                 if dEntry and dEntry.note and dEntry.note ~= "" then
                     line = line .. " |cffaaaaaa– " .. dEntry.note .. "|r"
