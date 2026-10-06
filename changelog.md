@@ -1,6 +1,6 @@
 # PlayerDossier – Changelog
 
-## [Unreleased]
+## [1.1.0] - 2026-10-06
 
 ### New
 - LFG tooltip: the mood icon (good/neutral/bad) now appears directly next to the player's name in the Leader and Members lines of the group tooltip, not only in the PlayerDossier block at the bottom.
