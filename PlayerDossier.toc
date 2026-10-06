@@ -1,4 +1,4 @@
-## Interface: 120000, 120105
+## Interface: 120100, 120105
 ## Title: PlayerDossier
 ## Notes: Track players, ignore list, options – the complete player manager.
 ## Author: Nightwalker559
