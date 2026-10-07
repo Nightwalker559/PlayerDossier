@@ -9,20 +9,21 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 ### Dossier
 - Add any player with a **note** (up to 60 characters) and a **mood**: Good, Neutral or Bad.
 - Add players via right-click on a unit frame, a chat name, the group frames or the social menus.
-- The list is sorted by mood (Good → Neutral → Bad), then by name, and shows class color, server, role, time since you added them and your note.
+- The list shows mood, class color, server, role, time since you added them and your note. It is sorted by "Since" (newest first) by default; **click a column header** to sort by any column, click again to reverse. Your choice is remembered per tab.
+- Players on your ignore list are hidden here (their entry is kept and returns when you unignore them).
 - **Copy Name-Realm** from the context menu, ready to paste into raider.io or WarcraftLogs.
 - Get a **reunion notice** in chat when a tracked player joins your group.
 
 ### Ignore List — no 50-slot limit
-- Account-wide ignore list with an optional reason per player.
+- Account-wide ignore list with an optional reason per player. Same look as the Dossier (bad-mood icon, class color, role, sortable columns). When you ignore someone from your dossier, their note is prefilled as the reason.
 - The 50 most recent entries are also added to WoW's native ignore list, so every built-in WoW feature respects them. Everything beyond that is blocked silently through a chat filter, which effectively gives you unlimited ignores.
 - Optionally keep the list inside PlayerDossier only and leave WoW's native list untouched ("Use WoW's native ignore list").
 - **Auto-decline** duels, party invites, guild invites and trade requests from ignored players.
 - **Import** your existing WoW ignore list with one click.
 
 ### Group Finder (LFG)
-- **Inline warning:** a group whose leader or member is on your ignore list is marked red with "!IGNORED" directly in the search results, no hover needed.
-- **Tooltip:** hover a group to see which of its members are on your ignore list (with the ignore reason) or in your dossier (with your note). Works with players from other realms and alongside Raider.IO tooltips.
+- **Inline warning:** a group whose leader or member is on your ignore list is marked red with "!IGNORED" directly in the search results, no hover needed. Players with a **Bad** mood in your dossier get an orange "!WARNING" instead.
+- **Tooltip:** hover a group to see which of its members are on your ignore list (with the ignore reason) or in your dossier (with your note, bad-mood players highlighted). Works with players from other realms and alongside Raider.IO tooltips.
 
 ### Group History
 - Automatically logs everyone you group with in **Mythic+** (class, role, M+ level, last seen, how often you grouped).

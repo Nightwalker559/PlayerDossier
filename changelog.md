@@ -5,13 +5,17 @@
 ### New
 - Sortable columns in the Dossier, Ignore List and History tabs: click a header to sort, click again to reverse. The choice is saved per tab. ElvUI gets its own arrow.
 - LFG: players with a bad mood in the dossier show an orange "!WARNING" in the group list and tooltip.
-
 - Ignore List tab now looks like the Dossier tab: bad-mood icon, class-colored names and a role column.
 - Ignoring a player prefills the reason with their dossier note; both stay editable separately.
 
 ### Changed
 - Ignored players are hidden in the Dossier tab (their entry stays stored and returns when you unignore). The Ignore List menu no longer has the dossier entries.
 - Default sort in all tabs is "Since" (newest first). The Dossier tab no longer sorts by mood.
+
+### Internal
+- Shared `PD:RenderList` / `PD:FillPlayerCols` for the three list tabs, `PD:RefreshActiveTab` instead of per-panel refresh checks.
+- Faster lists: row pool without scanning, backdrop set once per row, sort keys computed once.
+- Removed dead code (mood sort order, unused menu entries and locale strings).
 
 ## [1.1.0] - 2026-10-06
 

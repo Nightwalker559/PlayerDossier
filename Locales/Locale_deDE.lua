@@ -109,7 +109,6 @@ L["PL_COL_REALM"] = "Server"
 L["PL_COL_ROLE"]  = "Rolle"
 L["PL_COL_SINCE"] = "Seit"
 L["PL_COL_NOTE"]  = "Notiz"
-L["IL_IGNORED_HINT"]    = "Ignoriert"
 
 L["BTN_COPY_NAME"]      = "Name-Server kopieren"
 L["COPY_POPUP_TITLE"]   = "Kopieren – Strg+C"

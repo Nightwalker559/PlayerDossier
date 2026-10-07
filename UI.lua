@@ -1,8 +1,8 @@
 -- ============================================================
 --  PlayerDossier – UI.lua
 --  Unit tooltip, note dialog, right-click menus, main window with
---  4 tabs (Players / Ignore List / History / Options) and the
---  Players panel. The other panels are built in IgnoreList.lua,
+--  4 tabs (Dossier / Ignore List / History / Options) and the
+--  Dossier panel. The other panels are built in IgnoreList.lua,
 --  GroupHistory.lua and Options.lua.
 -- ============================================================
 
@@ -93,7 +93,7 @@ local function SaveNote()
     local note  = strtrim(PD.noteDialog.editBox:GetText())
     local class = ResolveClass(pending.name, pending.realm, pending.class, pending.guid)
     PD:SetEntry(pending.name, pending.realm, note, pending.mood, class, pending.guid)
-    if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
+    PD:RefreshActiveTab()
     CloseNoteDialog()
 end
 
@@ -194,9 +194,7 @@ local function AddDossierMenu(root, name, realm, class, guid)
     if entry then
         root:CreateButton(L["MENU_REMOVE"], function()
             securecallfunction(PD.RemoveEntry, PD, name, realm)
-            if PD.mainFrame and PD.mainFrame:IsShown() then
-                securecallfunction(PD.RefreshMainWindow, PD)
-            end
+            securecallfunction(PD.RefreshActiveTab, PD)
         end)
     end
 end
@@ -410,6 +408,13 @@ function PD:SelectTab(n)
     if n == 4 then PD:SetSubtitle(L["TAB_OPTIONS"]) end
 end
 
+-- Refreshes the visible tab (no-op while the window is closed)
+function PD:RefreshActiveTab()
+    if activeTab and PD.mainFrame and PD.mainFrame:IsShown() then
+        PD[TABS[activeTab].refresh](PD)
+    end
+end
+
 function PD:OpenOnTab(n)
     if not PD.mainFrame then return end
     if PD.mainFrame:IsShown() and activeTab == n then
@@ -423,7 +428,7 @@ end
 function PD:ToggleMainWindow() PD:OpenOnTab(1) end
 
 -- ================================================================
--- 6.  PLAYERS PANEL
+-- 6.  DOSSIER PANEL
 -- ================================================================
 
 local GetRow, HideAllRows = PD:NewRowPool()
@@ -436,17 +441,12 @@ local COL_NOTE  = PD.COL.LAST
 local ROW_H     = 52   -- fits the 48px mood icon
 local ROW_PAD   = 2
 
-local SORT_DEFAULT = { key = "since", asc = false }   -- newest first
-
-local function Lower(s) return (s or ""):lower() end
+local Lower = PD.Lower
 
 local SORT_GETTERS = {
     name  = function(e) return Lower(e.name) end,
     realm = function(e) return Lower(e.realm) end,
-    role  = function(e)
-        local h = PD:GH_GetEntry(e.name, e.realm)
-        return Lower(h and h.role)
-    end,
+    role  = PD.RoleSortKey,
     since = function(e) return e.timestamp or 0 end,
     note  = function(e) return Lower(e.note) end,
 }
@@ -462,7 +462,7 @@ function PD:BuildPlayersPanel(panel)
         },
         sort = {
             id       = "players",
-            default  = SORT_DEFAULT,
+            default  = PD.SORT_DEFAULT,
             onChange = function() PD:RefreshMainWindow() end,
         },
         scroll     = "PDScrollFrame",
@@ -473,8 +473,14 @@ function PD:BuildPlayersPanel(panel)
 end
 
 local function FillPlayerRow(row, e)
-    PD:FillPlayerCols(row, e, { mood = e.mood, class = e.class, ts = e.timestamp, note = e.note })
+    PD:FillPlayerCols(row, e, {
+        mood  = e.mood,
+        class = PD:LookupClass(e.name, e.realm),
+        ts    = e.timestamp,
+        note  = e.note,
+    })
 
+    -- Ignored players never show up in this tab, so no "unignore" here
     local eName, eRealm, eClass, eGuid, eMood = e.name, e.realm, e.class, e.guid, e.mood
     PD:SetRowMenu(row, function(root)
         root:CreateTitle("|cff9B82F3" .. eName .. "|r")
@@ -482,23 +488,8 @@ local function FillPlayerRow(row, e)
         root:CreateButton(L["BTN_EDIT"], function()
             PD:OpenNoteDialog(eName, eRealm, eClass, eGuid, eMood)
         end)
-
-        local isIgn = PD:IL_IsIgnored(eName, eRealm)
-        if isIgn then
-            -- Whispering ignored players isn't possible (disabled entry)
-            root:CreateButton("|cffaaaaaa" .. L["BTN_WHISPER"] .. " (" .. L["IL_IGNORED_HINT"] .. ")|r", function() end)
-        else
-            root:CreateButton(L["BTN_WHISPER"], function() WhisperPlayer(eName, eRealm) end)
-        end
-
-        root:CreateButton(isIgn and L["BTN_UNIGNORE"] or L["BTN_IGNORE"], function()
-            if isIgn then
-                PD:IL_Remove(eName, eRealm)
-            else
-                PD:IL_PromptIgnore(eName, eRealm)
-            end
-            PD:RefreshMainWindow()
-        end)
+        root:CreateButton(L["BTN_WHISPER"], function() WhisperPlayer(eName, eRealm) end)
+        root:CreateButton(L["BTN_IGNORE"], function() PD:IL_PromptIgnore(eName, eRealm) end)
 
         root:CreateDivider()
         root:CreateButton(L["BTN_COPY_NAME"], function()
@@ -514,29 +505,19 @@ end
 function PD:RefreshMainWindow()
     local p1 = PD.panel1
     if not p1 then return end
-    local content = p1.scrollContent
-    HideAllRows()
-    PD:HideEmptyLabel(p1)
-
-    local list = {}
-    -- Ignored players live in the Ignore List tab only (their entry stays stored)
-    for _, entry in pairs(PD:GetAllEntries()) do
-        if not PD:IL_IsIgnored(entry.name, entry.realm) then list[#list + 1] = entry end
-    end
-    PD:SortList(list, "players", SORT_DEFAULT, SORT_GETTERS)
-
-    local count = #list
-    PD:SetSubtitle(PD.CountText(count, "SUB_NO_ENTRIES", "SUB_1_ENTRY", "SUB_N_ENTRIES"), p1)
-
-    if count == 0 then
-        PD:ShowEmptyLabel(p1, content, L["EMPTY_PLAYERS"], 60, 160)
-        return
-    end
-
-    for i, e in ipairs(list) do
-        local row = GetRow(content)
-        PD:SetupRow(row, content, i, ROW_H, ROW_PAD, PD.ROW_TINT.default)
-        FillPlayerRow(row, e)
-    end
-    PD:FinishList(content, count, ROW_H, ROW_PAD)
+    PD:RenderList({
+        panel    = p1,
+        content  = p1.scrollContent,
+        list     = PD:GetVisibleEntries(),
+        getRow   = GetRow,
+        hideAll  = HideAllRows,
+        sortId   = "players",
+        getters  = SORT_GETTERS,
+        subtitle = { "SUB_NO_ENTRIES", "SUB_1_ENTRY", "SUB_N_ENTRIES" },
+        empty    = { L["EMPTY_PLAYERS"], 60, 160 },
+        rowH     = ROW_H,
+        pad      = ROW_PAD,
+        tint     = PD.ROW_TINT.default,
+        fill     = FillPlayerRow,
+    })
 end

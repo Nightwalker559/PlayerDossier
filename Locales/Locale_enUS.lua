@@ -107,7 +107,6 @@ L["PL_COL_REALM"] = "Server"
 L["PL_COL_ROLE"]  = "Role"
 L["PL_COL_SINCE"] = "Since"
 L["PL_COL_NOTE"]  = "Note"
-L["IL_IGNORED_HINT"]    = "Ignored"
 
 L["BTN_COPY_NAME"]      = "Copy Name-Realm"
 L["COPY_POPUP_TITLE"]   = "Copy – Ctrl+C"

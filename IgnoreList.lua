@@ -51,11 +51,8 @@ local function GetNameCache()
     return nameCache
 end
 
--- Ignored players are hidden in the Dossier tab, so both lists change
-local function RefreshPanelIfShown()
-    if PD.panel1 and PD.panel1:IsShown() then PD:RefreshMainWindow() end
-    if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
-end
+-- Ignored players are hidden in the Dossier tab, so either tab may change
+local function RefreshPanelIfShown() PD:RefreshActiveTab() end
 
 function PD:IL_Add(name, realm, reason)
     realm = PD.NormRealm(realm)
@@ -383,17 +380,12 @@ local COL_NOTE   = PD.COL.LAST
 local ROW_H      = 52
 local ROW_PAD    = 2
 
-local SORT_DEFAULT = { key = "since", asc = false }   -- newest first
-
-local function Lower(s) return (s or ""):lower() end
+local Lower = PD.Lower
 
 local SORT_GETTERS = {
     name  = function(e) return Lower(e.name) end,
     realm = function(e) return Lower(e.realm) end,
-    role  = function(e)
-        local h = PD:GH_GetEntry(e.name, e.realm)
-        return Lower(h and h.role)
-    end,
+    role  = PD.RoleSortKey,
     since = function(e) return e.timestamp or 0 end,
     note  = function(e) return Lower(e.reason) end,
 }
@@ -409,7 +401,7 @@ function PD:BuildIgnorePanel(panel)
         },
         sort = {
             id       = "ignore",
-            default  = SORT_DEFAULT,
+            default  = PD.SORT_DEFAULT,
             onChange = function() PD:RefreshIgnorePanel() end,
         },
         scroll     = "PDILScrollFrame",
@@ -437,8 +429,6 @@ local function FillIgnoreRow(row, entry)
         root:CreateButton(L["BTN_EDIT_REASON"], function()
             PD:IL_PromptEditReason(eName, eRealm, eReason)
         end)
-        -- Whispering ignored players isn't possible (disabled entry)
-        root:CreateButton("|cffaaaaaa" .. L["BTN_WHISPER"] .. " (" .. L["IL_IGNORED_HINT"] .. ")|r", function() end)
         root:CreateDivider()
         root:CreateButton(L["BTN_COPY_NAME"], function()
             PD:ShowCopyPopup(eName .. "-" .. eRealm)
@@ -449,28 +439,23 @@ end
 function PD:RefreshIgnorePanel()
     local panel = PD.panel2
     if not panel or not panel.ilContent then return end
-    local content = panel.ilContent
-    HideAllILRows()
-
     local list = {}
     for _, entry in pairs(PD:IL_GetAll()) do list[#list + 1] = entry end
-    PD:SortList(list, "ignore", SORT_DEFAULT, SORT_GETTERS)
-
-    local count = #list
-    PD:SetSubtitle(PD.CountText(count, "SUB_NO_IGNORED", "SUB_1_IGNORED", "SUB_N_IGNORED"), panel)
-
-    if count == 0 then
-        PD:ShowEmptyLabel(panel, content, L["IL_EMPTY"], 40, 100)
-        return
-    end
-    PD:HideEmptyLabel(panel)
-
-    for i, entry in ipairs(list) do
-        local row = GetILRow(content)
-        PD:SetupRow(row, content, i, ROW_H, ROW_PAD, PD.ROW_TINT.ignore)
-        FillIgnoreRow(row, entry)
-    end
-    PD:FinishList(content, count, ROW_H, ROW_PAD)
+    PD:RenderList({
+        panel    = panel,
+        content  = panel.ilContent,
+        list     = list,
+        getRow   = GetILRow,
+        hideAll  = HideAllILRows,
+        sortId   = "ignore",
+        getters  = SORT_GETTERS,
+        subtitle = { "SUB_NO_IGNORED", "SUB_1_IGNORED", "SUB_N_IGNORED" },
+        empty    = { L["IL_EMPTY"], 40, 100 },
+        rowH     = ROW_H,
+        pad      = ROW_PAD,
+        tint     = PD.ROW_TINT.ignore,
+        fill     = FillIgnoreRow,
+    })
 end
 
 -- ================================================================

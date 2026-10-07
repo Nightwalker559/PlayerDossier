@@ -124,7 +124,7 @@ function PD:BuildOptionsPanel(panel)
     MakeCB("syncNativeIgnore", L["OPT_SYNC_NATIVE"], L["OPT_SYNC_NATIVE_SUB"], {
         onChange = function()
             PD:IL_Sync()
-            if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
+            PD:RefreshActiveTab()
         end,
     })
     local cbDecline, rhDecline = MakeCB("autoDecline", L["OPT_AUTO_DECLINE"], L["OPT_AUTO_DECLINE_SUB"])
@@ -138,9 +138,7 @@ function PD:BuildOptionsPanel(panel)
     declineNote:SetText(L["OPT_AUTO_DECLINE_NOTE"])
     yOff = yOff - declineNote:GetStringHeight() - 16
     MakeCB("classColors", L["OPT_CLASS_COLORS"], L["OPT_CLASS_COLORS_SUB"], {
-        onChange = function()
-            if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
-        end,
+        onChange = function() PD:RefreshActiveTab() end,
     })
 
     -- ── Ignore limit workaround ──────────────────────────────
@@ -204,18 +202,18 @@ end
 
 StaticPopupDialogs["PD_CONFIRM_CLEAR_PLAYERS"] = ConfirmDialog("OPT_CONFIRM_CLEAR_PLAYERS", function()
     PlayerDossierDB.players = {}
-    if PD.mainFrame and PD.mainFrame:IsShown() then PD:RefreshMainWindow() end
+    PD:RefreshActiveTab()
 end)
 
 StaticPopupDialogs["PD_CONFIRM_CLEAR_IGNORE"] = ConfirmDialog("OPT_CONFIRM_CLEAR_IGNORE", function()
     PlayerDossierDB.ignoreList = {}
     PD:IL_Sync()   -- also empties WoW's native list
-    if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
+    PD:RefreshActiveTab()
 end)
 
 StaticPopupDialogs["PD_CONFIRM_CLEAR_HISTORY"] = ConfirmDialog("OPT_CONFIRM_CLEAR_HISTORY", function()
     PlayerDossierDB.history = {}
-    if PD.panel3 and PD.panel3:IsShown() then PD:RefreshHistoryPanel() end
+    PD:RefreshActiveTab()
 end)
 
 -- ================================================================

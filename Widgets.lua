@@ -1,6 +1,6 @@
 -- ============================================================
 --  PlayerDossier – Widgets.lua
---  Shared UI building blocks used by the Players, Ignore List and
+--  Shared UI building blocks used by the Dossier, Ignore List and
 --  History panels: column layout, row pooling, list panels, popups.
 -- ============================================================
 
@@ -8,11 +8,11 @@ local PD = PlayerDossier
 local L  = PD.L
 
 -- ----------------------------------------------------------------
--- Column positions shared by the Players, Ignore List and History
+-- Column positions shared by the Dossier, Ignore List and History
 -- tabs. All panels live in the same main window (same width), so
 -- identical x values give an identical look.
 -- MODE is only used by the History tab. LAST is "Note" in the
--- Players/Ignore List tabs but "Grouped" in History.
+-- Dossier/Ignore List tabs but "Grouped" in History.
 -- ----------------------------------------------------------------
 PD.COL = {
     MOOD  = 4,    -- mood icon (Dossier and Ignore List tabs, no header)
@@ -43,7 +43,7 @@ function PD:MakeDraggable(f)
 end
 
 -- ----------------------------------------------------------------
--- Shared table header for the Players/Ignore List/History tabs.
+-- Shared table header for the Dossier/Ignore List/History tabs.
 -- Each header stretches to the next column (the last one to the
 -- panel's right edge) so long labels aren't cut off.
 --
@@ -53,6 +53,19 @@ end
 -- sort:  { id=<saved sort state name>, default={key=,asc=}, onChange=fn }
 -- rightPad: distance to the panel's right edge (default 26 = scrollbar)
 -- ----------------------------------------------------------------
+
+-- Default for every list tab: "Since", newest first
+PD.SORT_DEFAULT = { key = "since", asc = false }
+
+-- Lower-case string for sort keys (nil → "")
+function PD.Lower(s) return (s or ""):lower() end
+
+-- Sort key for the Role column of the Dossier and Ignore List tabs (role
+-- comes from the group history)
+function PD.RoleSortKey(e)
+    local h = PD:GH_GetEntry(e.name, e.realm)
+    return PD.Lower(h and h.role)
+end
 
 -- Saved sort state of a list tab (falls back to the tab's default)
 function PD:GetSortState(id, default)
@@ -72,8 +85,10 @@ function PD:SortList(list, id, default, getters)
     local s   = PD:GetSortState(id, default)
     local get = getters[s.key] or getters[default.key]
     local asc = s.asc
+    local keys = {}   -- sort key per entry, computed once
+    for _, e in ipairs(list) do keys[e] = get(e) end
     table.sort(list, function(a, b)
-        local va, vb = get(a), get(b)
+        local va, vb = keys[a], keys[b]
         if va ~= vb then
             if asc then return va < vb end
             return va > vb
@@ -175,17 +190,22 @@ end
 -- Frame pool for list rows. Returns GetRow(parent), HideAll().
 -- ----------------------------------------------------------------
 function PD:NewRowPool()
-    local pool = {}
+    local pool, used = {}, 0
     local function GetRow(parent)
-        for _, r in ipairs(pool) do
-            if not r:IsShown() then r:SetParent(parent) r:Show() return r end
+        used = used + 1
+        local r = pool[used]
+        if not r then
+            r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+            pool[used] = r
+        else
+            r:SetParent(parent)
+            r:Show()
         end
-        local r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-        table.insert(pool, r)
         return r
     end
     local function HideAll()
-        for _, r in ipairs(pool) do r:Hide() end
+        for i = 1, used do pool[i]:Hide() end
+        used = 0
     end
     return GetRow, HideAll
 end
@@ -229,7 +249,10 @@ function PD:SetupRow(row, content, index, rowH, pad, tint)
     row:SetSize(content:GetWidth() - 4, rowH)
     row:ClearAllPoints()
     row:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -pad - (index - 1) * (rowH + pad))
-    row:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
+    if not row.pdBackdrop then
+        row.pdBackdrop = true
+        row:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
+    end
     row:SetBackdropColor(unpack(tint[index % 2 == 0 and 1 or 2]))
 
     row:EnableMouse(true)
@@ -244,6 +267,32 @@ end
 -- Sets the scroll content height after `count` rows
 function PD:FinishList(content, count, rowH, pad)
     content:SetHeight(2 * pad + count * (rowH + pad))
+end
+
+-- Fills a list tab: sorts the entries, sets the subtitle and shows either
+-- the empty label or one row per entry.
+-- o = { panel, content, list, getRow, hideAll, sortId, getters,
+--       subtitle = {noneKey, oneKey, manyKey}, empty = {text, top, height},
+--       rowH, pad, tint, fill = function(row, entry) }
+function PD:RenderList(o)
+    o.hideAll()
+    PD:SortList(o.list, o.sortId, PD.SORT_DEFAULT, o.getters)
+
+    local count = #o.list
+    PD:SetSubtitle(PD.CountText(count, unpack(o.subtitle)), o.panel)
+
+    if count == 0 then
+        PD:ShowEmptyLabel(o.panel, o.content, o.empty[1], o.empty[2], o.empty[3])
+        return
+    end
+    PD:HideEmptyLabel(o.panel)
+
+    for i, e in ipairs(o.list) do
+        local row = o.getRow(o.content)
+        PD:SetupRow(row, o.content, i, o.rowH, o.pad, o.tint)
+        o.fill(row, e)
+    end
+    PD:FinishList(o.content, count, o.rowH, o.pad)
 end
 
 -- Returns row[key], creating the FontString on first use.
@@ -276,7 +325,7 @@ end
 -- Class of a player known to the dossier or the group history (nil if unknown)
 function PD:LookupClass(name, realm)
     local d = PD:GetEntry(name, realm)
-    if d and d.class then return d.class end
+    if d and d.class and d.class ~= "UNKNOWN" then return d.class end
     local h = PD:GH_GetEntry(name, realm)
     if h and h.class and h.class ~= "UNKNOWN" then return h.class end
 end

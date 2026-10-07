@@ -181,9 +181,7 @@ local COL_COUNT = PD.COL.LAST
 local ROW_H     = 40
 local ROW_PAD   = 2
 
-local SORT_DEFAULT = { key = "since", asc = false }   -- newest first
-
-local function Lower(s) return (s or ""):lower() end
+local Lower = PD.Lower
 
 local SORT_GETTERS = {
     name  = function(e) return Lower(e.name) end,
@@ -206,7 +204,7 @@ function PD:BuildHistoryPanel(panel)
         },
         sort = {
             id       = "history",
-            default  = SORT_DEFAULT,
+            default  = PD.SORT_DEFAULT,
             onChange = function() PD:RefreshHistoryPanel() end,
         },
         scroll     = "PDHistScrollFrame",
@@ -261,26 +259,21 @@ end
 function PD:RefreshHistoryPanel()
     local panel = PD.panel3
     if not panel or not panel.histContent then return end
-    local content = panel.histContent
-    HideAllHistRows()
-
     local list = {}
     for _, e in pairs(PD:GH_GetAll()) do list[#list + 1] = e end
-    PD:SortList(list, "history", SORT_DEFAULT, SORT_GETTERS)
-
-    local count = #list
-    PD:SetSubtitle(PD.CountText(count, "SUB_NO_HISTORY", "SUB_1_HISTORY", "SUB_N_HISTORY"), panel)
-
-    if count == 0 then
-        PD:ShowEmptyLabel(panel, content, L["HIST_EMPTY"], 40, 100)
-        return
-    end
-    PD:HideEmptyLabel(panel)
-
-    for i, e in ipairs(list) do
-        local row = GetHistRow(content)
-        PD:SetupRow(row, content, i, ROW_H, ROW_PAD, PD.ROW_TINT.default)
-        FillHistoryRow(row, e)
-    end
-    PD:FinishList(content, count, ROW_H, ROW_PAD)
+    PD:RenderList({
+        panel    = panel,
+        content  = panel.histContent,
+        list     = list,
+        getRow   = GetHistRow,
+        hideAll  = HideAllHistRows,
+        sortId   = "history",
+        getters  = SORT_GETTERS,
+        subtitle = { "SUB_NO_HISTORY", "SUB_1_HISTORY", "SUB_N_HISTORY" },
+        empty    = { L["HIST_EMPTY"], 40, 100 },
+        rowH     = ROW_H,
+        pad      = ROW_PAD,
+        tint     = PD.ROW_TINT.default,
+        fill     = FillHistoryRow,
+    })
 end

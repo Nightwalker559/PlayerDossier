@@ -129,9 +129,9 @@ end
 -- ----------------------------------------------------------------
 
 PD.MOOD = {
-    positive = { r = 0, g = 0.80, b = 0,    hex = "00cc00", labelKey = "MOOD_GOOD",    file = "mood_good",    order = 1 },
-    neutral  = { r = 1, g = 0.85, b = 0,    hex = "ffdd00", labelKey = "MOOD_NEUTRAL", file = "mood_neutral", order = 2 },
-    negative = { r = 1, g = 0.18, b = 0.18, hex = "ff2e2e", labelKey = "MOOD_BAD",     file = "mood_bad",     order = 3 },
+    positive = { r = 0, g = 0.80, b = 0,    hex = "00cc00", labelKey = "MOOD_GOOD",    file = "mood_good"    },
+    neutral  = { r = 1, g = 0.85, b = 0,    hex = "ffdd00", labelKey = "MOOD_NEUTRAL", file = "mood_neutral" },
+    negative = { r = 1, g = 0.18, b = 0.18, hex = "ff2e2e", labelKey = "MOOD_BAD",     file = "mood_bad"     },
 }
 for _, m in pairs(PD.MOOD) do
     m.tex = MEDIA .. m.file .. ".png"
@@ -289,6 +289,16 @@ function PD:GetAllEntries()
     return db.players
 end
 
+-- Dossier entries as a list, without ignored players (those live in the
+-- Ignore List tab; their dossier entry stays stored)
+function PD:GetVisibleEntries()
+    local list = {}
+    for _, e in pairs(PD:GetAllEntries()) do
+        if not PD:IL_IsIgnored(e.name, e.realm) then list[#list + 1] = e end
+    end
+    return list
+end
+
 function PD:Count()
-    return PD.TableCount(PD:GetAllEntries())
+    return #PD:GetVisibleEntries()
 end
