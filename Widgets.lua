@@ -15,9 +15,10 @@ local L  = PD.L
 -- Players/Ignore List tabs but "Grouped" in History.
 -- ----------------------------------------------------------------
 PD.COL = {
-    NAME  = 58,   -- leaves room for the 48px mood icon in the Dossier tab
+    MOOD  = 4,    -- mood icon (Dossier and Ignore List tabs, no header)
+    NAME  = 58,   -- leaves room for the 48px mood icon
     REALM = 220,
-    ROLE  = 330,  -- not used by the Ignore List
+    ROLE  = 330,
     MODE  = 370,  -- History only (only ever "M+<level>" - ScanGroup() filters on ^M%+)
     SINCE = 440,
     LAST  = 485,
@@ -270,6 +271,45 @@ function PD:ApplyNameColor(fs, class)
     local cc = PD:OPT_Get("classColors") and RAID_CLASS_COLORS and RAID_CLASS_COLORS[class]
     if cc then fs:SetTextColor(cc.r, cc.g, cc.b)
     else       fs:SetTextColor(1, 1, 1) end
+end
+
+-- Class of a player known to the dossier or the group history (nil if unknown)
+function PD:LookupClass(name, realm)
+    local d = PD:GetEntry(name, realm)
+    if d and d.class then return d.class end
+    local h = PD:GH_GetEntry(name, realm)
+    if h and h.class and h.class ~= "UNKNOWN" then return h.class end
+end
+
+-- Columns shared by the Dossier and Ignore List rows: mood icon,
+-- class-colored name, realm, role (from the group history), since, note.
+-- e: entry (name, realm); o: { mood, class, ts, note }
+function PD:FillPlayerCols(row, e, o)
+    local COL = PD.COL
+
+    if not row.moodTex then
+        row.moodTex = row:CreateTexture(nil, "ARTWORK")
+        row.moodTex:SetSize(48, 48)
+        row.moodTex:SetPoint("LEFT", row, "LEFT", COL.MOOD, 0)
+    end
+    row.moodTex:SetTexture(PD:GetMood(o.mood).tex)
+
+    local nameLabel = PD:RowLabel(row, "nameLabel", COL.NAME, COL.REALM, "GameFontNormalLarge")
+    PD:ApplyNameColor(nameLabel, o.class)
+    nameLabel:SetText(e.name or "?")
+
+    PD:RowLabel(row, "realmLabel", COL.REALM, COL.ROLE, nil, 0.78, 0.78, 0.78)
+        :SetText(e.realm or PD.GetMyRealm())
+
+    local hEntry = PD:GH_GetEntry(e.name, e.realm)
+    PD:RowLabel(row, "roleLabel", COL.ROLE, COL.SINCE):SetText(PD:GH_RoleText(hEntry and hEntry.role))
+
+    PD:RowLabel(row, "sinceLabel", COL.SINCE, COL.LAST, nil, 0.78, 0.78, 0.78)
+        :SetText(PD:TimeAgo(o.ts))
+
+    local noteLabel = PD:RowLabel(row, "noteLabel", COL.LAST, nil, nil, 0.60, 0.60, 0.60)
+    noteLabel:SetWordWrap(false)
+    noteLabel:SetText((o.note and o.note ~= "") and o.note or "|cff444444-|r")
 end
 
 -- Right-click context menu for a row. build(root) fills the menu.

@@ -339,20 +339,26 @@ local function ReasonDialog(textKey, acceptKey, onAccept, onShow)
     return dialog
 end
 
+-- Fills the edit box with pending.reason
+local function PrefillReason(self)
+    self.EditBox:SetText(pending.reason or "")
+    self.EditBox:HighlightText()
+end
+
 StaticPopupDialogs["PD_IGNORE_REASON"] = ReasonDialog(
     "POPUP_IGNORE_TEXT", "BTN_IGNORE_PLAIN",
-    function(name, realm, reason) PD:IL_Add(name, realm, reason) end)
+    function(name, realm, reason) PD:IL_Add(name, realm, reason) end,
+    PrefillReason)
 
 StaticPopupDialogs["PD_IGNORE_EDIT_REASON"] = ReasonDialog(
     "POPUP_EDIT_REASON_TEXT", "BTN_SAVE",
     function(name, realm, reason) PD:IL_SetReason(name, realm, reason) end,
-    function(self)
-        self.EditBox:SetText(pending.reason or "")
-        self.EditBox:HighlightText()
-    end)
+    PrefillReason)
 
+-- The reason starts as the player's dossier note (editable separately afterwards)
 function PD:IL_PromptIgnore(name, realm)
-    pending.name, pending.realm = name, realm
+    local dEntry = PD:GetEntry(name, realm)
+    pending.name, pending.realm, pending.reason = name, realm, dEntry and dEntry.note or ""
     StaticPopup_Show("PD_IGNORE_REASON", name)
 end
 
@@ -369,6 +375,7 @@ local GetILRow, HideAllILRows = PD:NewRowPool()
 
 local COL_NAME   = PD.COL.NAME
 local COL_REALM  = PD.COL.REALM
+local COL_ROLE   = PD.COL.ROLE
 local COL_LISTED = PD.COL.SINCE
 local COL_NOTE   = PD.COL.LAST
 local ROW_H      = 52
@@ -381,6 +388,10 @@ local function Lower(s) return (s or ""):lower() end
 local SORT_GETTERS = {
     name  = function(e) return Lower(e.name) end,
     realm = function(e) return Lower(e.realm) end,
+    role  = function(e)
+        local h = PD:GH_GetEntry(e.name, e.realm)
+        return Lower(h and h.role)
+    end,
     since = function(e) return e.timestamp or 0 end,
     note  = function(e) return Lower(e.reason) end,
 }
@@ -390,6 +401,7 @@ function PD:BuildIgnorePanel(panel)
         heads = {
             { text = L["IL_COL_NAME"],   x = COL_NAME,   key = "name"  },
             { text = L["IL_COL_REALM"],  x = COL_REALM,  key = "realm" },
+            { text = L["PL_COL_ROLE"],   x = COL_ROLE,   key = "role"  },
             { text = L["IL_COL_LISTED"], x = COL_LISTED, key = "since", descFirst = true },
             { text = L["IL_COL_NOTE"],   x = COL_NOTE,   key = "note"  },
         },
@@ -406,14 +418,13 @@ function PD:BuildIgnorePanel(panel)
 end
 
 local function FillIgnoreRow(row, entry)
-    -- Ignore list: always white names (class colors only in the Dossier tab)
-    PD:RowLabel(row, "nameLabel", COL_NAME, COL_REALM, nil, 1, 1, 1):SetText(entry.name or "?")
-    PD:RowLabel(row, "realmLabel", COL_REALM, COL_LISTED, nil, 0.78, 0.78, 0.78)
-        :SetText(entry.realm or PD.GetMyRealm())
-    PD:RowLabel(row, "listedLabel", COL_LISTED, COL_NOTE, nil, 0.78, 0.78, 0.78)
-        :SetText(PD:TimeAgo(entry.timestamp))
-    PD:RowLabel(row, "noteLabel", COL_NOTE, nil, nil, 0.60, 0.60, 0.60)
-        :SetText((entry.reason and entry.reason ~= "") and entry.reason or "|cff444444-|r")
+    -- Same columns as the Dossier tab; ignored players always get the bad mood icon
+    PD:FillPlayerCols(row, entry, {
+        mood  = "negative",
+        class = PD:LookupClass(entry.name, entry.realm),
+        ts    = entry.timestamp,
+        note  = entry.reason,
+    })
 
     local eName, eRealm, eReason = entry.name, entry.realm, entry.reason
     PD:SetRowMenu(row, function(root)

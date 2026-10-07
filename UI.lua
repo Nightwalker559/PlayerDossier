@@ -428,7 +428,6 @@ function PD:ToggleMainWindow() PD:OpenOnTab(1) end
 
 local GetRow, HideAllRows = PD:NewRowPool()
 
-local COL_MOOD  = 4    -- mood icon (Dossier tab only)
 local COL_NAME  = PD.COL.NAME
 local COL_REALM = PD.COL.REALM
 local COL_ROLE  = PD.COL.ROLE
@@ -474,30 +473,7 @@ function PD:BuildPlayersPanel(panel)
 end
 
 local function FillPlayerRow(row, e)
-    if not row.moodTex then
-        row.moodTex = row:CreateTexture(nil, "ARTWORK")
-        row.moodTex:SetSize(48, 48)
-        row.moodTex:SetPoint("LEFT", row, "LEFT", COL_MOOD, 0)
-    end
-    row.moodTex:SetTexture(PD:GetMood(e.mood).tex)
-
-    local nameLabel = PD:RowLabel(row, "nameLabel", COL_NAME, COL_REALM, "GameFontNormalLarge")
-    PD:ApplyNameColor(nameLabel, e.class)
-    nameLabel:SetText(e.name or "?")
-
-    PD:RowLabel(row, "realmLabel", COL_REALM, COL_ROLE, nil, 0.78, 0.78, 0.78)
-        :SetText(e.realm or PD.GetMyRealm())
-
-    -- Role (from the group history, if known)
-    local hEntry = PD:GH_GetEntry(e.name, e.realm)
-    PD:RowLabel(row, "roleLabel", COL_ROLE, COL_SINCE):SetText(PD:GH_RoleText(hEntry and hEntry.role))
-
-    PD:RowLabel(row, "sinceLabel", COL_SINCE, COL_NOTE, nil, 0.78, 0.78, 0.78)
-        :SetText(PD:TimeAgo(e.timestamp))
-
-    local noteLabel = PD:RowLabel(row, "noteLabel", COL_NOTE, nil, nil, 0.60, 0.60, 0.60)
-    noteLabel:SetWordWrap(false)
-    noteLabel:SetText((e.note and e.note ~= "") and e.note or "|cff444444-|r")
+    PD:FillPlayerCols(row, e, { mood = e.mood, class = e.class, ts = e.timestamp, note = e.note })
 
     local eName, eRealm, eClass, eGuid, eMood = e.name, e.realm, e.class, e.guid, e.mood
     PD:SetRowMenu(row, function(root)
