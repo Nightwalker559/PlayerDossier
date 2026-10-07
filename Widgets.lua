@@ -83,6 +83,23 @@ function PD:SortList(list, id, default, getters)
     end)
 end
 
+-- All sort arrows, so the ElvUI skin can restyle the ones already built
+local sortArrows = {}
+
+-- Look of a sort arrow; ElvUI_Skin.lua replaces this with ElvUI's arrow.
+function PD.StyleSortArrow(arrow, asc)
+    arrow:SetTexture("Interface\\Buttons\\UI-SortArrow")
+    arrow:SetSize(9, 8)
+    arrow:SetRotation(0)
+    arrow:SetVertexColor(1, 1, 1)
+    -- UI-SortArrow points up; flip vertically for descending
+    arrow:SetTexCoord(0, 0.5625, asc and 0 or 1, asc and 1 or 0)
+end
+
+function PD:RestyleSortArrows()
+    for _, arrow in ipairs(sortArrows) do PD.StyleSortArrow(arrow, arrow.asc) end
+end
+
 function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
     rightPad = rightPad or 26
     local buttons = {}
@@ -93,8 +110,8 @@ function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
             local active = s and s.key == key
             btn.arrow:SetShown(active)
             if active then
-                -- UI-SortArrow points up; flip vertically for descending
-                btn.arrow:SetTexCoord(0, 0.5625, s.asc and 0 or 1, s.asc and 1 or 0)
+                btn.arrow.asc = s.asc
+                PD.StyleSortArrow(btn.arrow, s.asc)
             end
         end
     end
@@ -121,11 +138,10 @@ function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
 
         if h.key and sort then
             local arrow = btn:CreateTexture(nil, "OVERLAY")
-            arrow:SetTexture("Interface\\Buttons\\UI-SortArrow")
-            arrow:SetSize(9, 8)
             arrow:SetPoint("LEFT", fs, "RIGHT", 3, 0)
             arrow:Hide()
             btn.arrow = arrow
+            sortArrows[#sortArrows + 1] = arrow
             buttons[h.key] = btn
 
             btn:SetScript("OnEnter", function() fs:SetTextColor(1, 1, 1) end)

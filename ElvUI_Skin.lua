@@ -100,6 +100,20 @@ end
 -- (the frames exist by then: PD:BuildUI runs from ADDON_LOADED).
 -- ----------------------------------------------------------------
 local function LoadSkin()
+    -- ── Sort arrows: ElvUI's own arrow in the accent color ──────
+    local arrowTex = E.Media and E.Media.Textures and E.Media.Textures.ArrowUp
+    if arrowTex then
+        PD.StyleSortArrow = function(arrow, asc)
+            arrow:SetTexture(arrowTex)
+            arrow:SetTexCoord(0, 1, 0, 1)
+            arrow:SetSize(12, 12)
+            arrow:SetRotation(asc and 0 or math.pi)
+            local c = E.media and E.media.rgbvaluecolor
+            if c then arrow:SetVertexColor(c[1], c[2], c[3]) else arrow:SetVertexColor(1, 1, 1) end
+        end
+        PD:RestyleSortArrows()
+    end
+
     -- ── Main window ─────────────────────────────────────────────
     local f = _G["PDMainFrame"]
     if f then

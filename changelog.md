@@ -3,7 +3,7 @@
 ## [1.1.1] - 2026-10-07
 
 ### New
-- Sortable columns in the Dossier, Ignore List and History tabs: click a header to sort, click again to reverse. The choice is saved per tab.
+- Sortable columns in the Dossier, Ignore List and History tabs: click a header to sort, click again to reverse. The choice is saved per tab. ElvUI gets its own arrow.
 - LFG: players with a bad mood in the dossier show an orange "!WARNING" in the group list and tooltip.
 
 ### Changed
