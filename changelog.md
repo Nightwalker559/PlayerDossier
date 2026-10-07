@@ -1,5 +1,14 @@
 # PlayerDossier – Changelog
 
+## [1.1.1] - 2026-10-07
+
+### New
+- Sortable columns in the Dossier, Ignore List and History tabs: click a header to sort, click again to reverse. The choice is saved per tab.
+- LFG: players with a bad mood in the dossier show an orange "!WARNING" in the group list and tooltip.
+
+### Changed
+- Default sort in all tabs is "Since" (newest first). The Dossier tab no longer sorts by mood.
+
 ## [1.1.0] - 2026-10-06
 
 ### Changed

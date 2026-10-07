@@ -139,9 +139,11 @@ L["OPT_AUTO_DECLINE_NOTE"] = "Note: May not work if another addon auto-accepts i
 -- ── LFG ──────────────────────────────────────────────────────
 L["OPT_SEC_LFG"]         = "Group Finder (LFG)"
 L["OPT_LFG_INLINE"]      = "Show inline warning in group list"
-L["OPT_LFG_INLINE_SUB"]  = "Colors the group name red and adds \"!IGNORED\" in front of it in the search result row when the leader or a member is on the PlayerDossier ignore list."
+L["OPT_LFG_INLINE_SUB"]  = "Colors the group name red and adds \"!IGNORED\" in front of it in the search result row when the leader or a member is on the PlayerDossier ignore list. Players with a bad mood in the dossier get an orange \"!WARNING\" instead."
 L["LFG_IGNORED_WARNING"]  = "Ignored player in this group:"
 L["LFG_INLINE_IGNORED"]   = "IGNORED"
+L["LFG_BAD_WARNING"]      = "Badly rated player in this group:"
+L["LFG_INLINE_BAD"]       = "WARNING"
 
 -- ── Ignore slots full warning ─────────────────────────────────
 L["IL_SLOTS_FULL"] = "|cff9B82F3PlayerDossier:|r |cffff8800All 50 WoW ignore slots are full. Additional players will be filtered via chat only.|r"

@@ -46,23 +46,106 @@ end
 -- Each header stretches to the next column (the last one to the
 -- panel's right edge) so long labels aren't cut off.
 --
--- heads: { { text=<string>, x=<pixel offset from left> }, ... }
---        sorted by x ascending.
+-- heads: { { text=<string>, x=<pixel offset from left>,
+--            key=<sort key>, descFirst=<true: first click sorts descending> }, ... }
+--        sorted by x ascending. Heads with a key are clickable.
+-- sort:  { id=<saved sort state name>, default={key=,asc=}, onChange=fn }
 -- rightPad: distance to the panel's right edge (default 26 = scrollbar)
 -- ----------------------------------------------------------------
-function PD:BuildColumnHeaders(panel, heads, rightPad)
+
+-- Saved sort state of a list tab (falls back to the tab's default)
+function PD:GetSortState(id, default)
+    local db = PlayerDossierDB
+    db.sort = db.sort or {}
+    local s = db.sort[id]
+    if not s or s.key == nil then
+        s = { key = default.key, asc = default.asc }
+        db.sort[id] = s
+    end
+    return s
+end
+
+-- Sorts `list` in place. getters[key](entry) returns a number or a
+-- lowercase string; ties fall back to name, then realm.
+function PD:SortList(list, id, default, getters)
+    local s   = PD:GetSortState(id, default)
+    local get = getters[s.key] or getters[default.key]
+    local asc = s.asc
+    table.sort(list, function(a, b)
+        local va, vb = get(a), get(b)
+        if va ~= vb then
+            if asc then return va < vb end
+            return va > vb
+        end
+        local na, nb = (a.name or ""):lower(), (b.name or ""):lower()
+        if na ~= nb then return na < nb end
+        return (a.realm or "") < (b.realm or "")
+    end)
+end
+
+function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
     rightPad = rightPad or 26
+    local buttons = {}
+
+    local function UpdateArrows()
+        local s = sort and PD:GetSortState(sort.id, sort.default)
+        for key, btn in pairs(buttons) do
+            local active = s and s.key == key
+            btn.arrow:SetShown(active)
+            if active then
+                -- UI-SortArrow points up; flip vertically for descending
+                btn.arrow:SetTexCoord(0, 0.5625, s.asc and 0 or 1, s.asc and 1 or 0)
+            end
+        end
+    end
+
     for i, h in ipairs(heads) do
-        local fs = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        fs:SetPoint("TOPLEFT", panel, "TOPLEFT", h.x + 2, -4)
         local nextX = heads[i + 1] and heads[i + 1].x
         local width = nextX and (nextX - h.x - 4)
             or (panel:GetWidth() - h.x - rightPad - 2)
-        if width and width > 0 then fs:SetWidth(width) end
+
+        local btn = CreateFrame("Button", nil, panel)
+        btn:SetPoint("TOPLEFT", panel, "TOPLEFT", h.x + 2, -2)
+        btn:SetHeight(16)
+        btn:SetWidth(width and width > 0 and width or 60)
+
+        local fs = btn:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        fs:SetPoint("LEFT", btn, "LEFT", 0, 0)
         fs:SetJustifyH("LEFT")
         fs:SetText(h.text)
         fs:SetTextColor(0.9, 0.82, 0.5)
+        -- Leave room for the sort arrow
+        if width and width > 0 and fs:GetStringWidth() > width - 14 then
+            fs:SetWidth(width - 14)
+        end
+
+        if h.key and sort then
+            local arrow = btn:CreateTexture(nil, "OVERLAY")
+            arrow:SetTexture("Interface\\Buttons\\UI-SortArrow")
+            arrow:SetSize(9, 8)
+            arrow:SetPoint("LEFT", fs, "RIGHT", 3, 0)
+            arrow:Hide()
+            btn.arrow = arrow
+            buttons[h.key] = btn
+
+            btn:SetScript("OnEnter", function() fs:SetTextColor(1, 1, 1) end)
+            btn:SetScript("OnLeave", function() fs:SetTextColor(0.9, 0.82, 0.5) end)
+            btn:SetScript("OnClick", function()
+                local s = PD:GetSortState(sort.id, sort.default)
+                if s.key == h.key then
+                    s.asc = not s.asc
+                else
+                    s.key = h.key
+                    s.asc = not h.descFirst
+                end
+                UpdateArrows()
+                sort.onChange()
+            end)
+        else
+            btn:EnableMouse(false)
+        end
     end
+    UpdateArrows()
 
     local sep = panel:CreateTexture(nil, "ARTWORK")
     sep:SetHeight(1)
@@ -94,12 +177,13 @@ end
 -- List panel skeleton: column headers, scroll frame and a
 -- "Remove All" button. Returns the scroll content frame.
 --
--- spec = { heads, scroll, content, clearBtn, clearPopup }
+-- spec = { heads, sort, scroll, content, clearBtn, clearPopup }
+--   sort: see BuildColumnHeaders.
 --   scroll/content/clearBtn: global frame names (ElvUI skin looks
 --   them up by name); clearPopup: StaticPopup shown by the button.
 -- ----------------------------------------------------------------
 function PD:BuildListPanel(panel, spec)
-    PD:BuildColumnHeaders(panel, spec.heads)
+    PD:BuildColumnHeaders(panel, spec.heads, nil, spec.sort)
 
     local sf = CreateFrame("ScrollFrame", spec.scroll, panel, "UIPanelScrollFrameTemplate")
     sf:SetPoint("TOPLEFT",     panel, "TOPLEFT",     4,  -22)

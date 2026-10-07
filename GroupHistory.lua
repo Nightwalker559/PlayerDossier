@@ -181,15 +181,33 @@ local COL_COUNT = PD.COL.LAST
 local ROW_H     = 40
 local ROW_PAD   = 2
 
+local SORT_DEFAULT = { key = "since", asc = false }   -- newest first
+
+local function Lower(s) return (s or ""):lower() end
+
+local SORT_GETTERS = {
+    name  = function(e) return Lower(e.name) end,
+    realm = function(e) return Lower(e.realm) end,
+    role  = function(e) return Lower(e.role) end,
+    mode  = function(e) return Lower(e.context) end,
+    since = function(e) return e.lastSeen or 0 end,
+    count = function(e) return e.count or 1 end,
+}
+
 function PD:BuildHistoryPanel(panel)
     panel.histContent = PD:BuildListPanel(panel, {
         heads = {
-            { text = L["HIST_COL_NAME"],  x = COL_NAME  },
-            { text = L["HIST_COL_REALM"], x = COL_REALM },
-            { text = L["HIST_COL_ROLE"],  x = COL_ROLE  },
-            { text = L["HIST_COL_MODE"],  x = COL_MODE  },
-            { text = L["HIST_COL_SEEN"],  x = COL_SEEN  },
-            { text = L["HIST_COL_COUNT"], x = COL_COUNT },
+            { text = L["HIST_COL_NAME"],  x = COL_NAME,  key = "name"  },
+            { text = L["HIST_COL_REALM"], x = COL_REALM, key = "realm" },
+            { text = L["HIST_COL_ROLE"],  x = COL_ROLE,  key = "role"  },
+            { text = L["HIST_COL_MODE"],  x = COL_MODE,  key = "mode"  },
+            { text = L["HIST_COL_SEEN"],  x = COL_SEEN,  key = "since", descFirst = true },
+            { text = L["HIST_COL_COUNT"], x = COL_COUNT, key = "count", descFirst = true },
+        },
+        sort = {
+            id       = "history",
+            default  = SORT_DEFAULT,
+            onChange = function() PD:RefreshHistoryPanel() end,
         },
         scroll     = "PDHistScrollFrame",
         content    = "PDHistScrollContent",
@@ -248,7 +266,7 @@ function PD:RefreshHistoryPanel()
 
     local list = {}
     for _, e in pairs(PD:GH_GetAll()) do list[#list + 1] = e end
-    table.sort(list, function(a, b) return (a.lastSeen or 0) > (b.lastSeen or 0) end)
+    PD:SortList(list, "history", SORT_DEFAULT, SORT_GETTERS)
 
     local count = #list
     PD:SetSubtitle(PD.CountText(count, "SUB_NO_HISTORY", "SUB_1_HISTORY", "SUB_N_HISTORY"), panel)

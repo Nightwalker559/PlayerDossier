@@ -437,14 +437,34 @@ local COL_NOTE  = PD.COL.LAST
 local ROW_H     = 52   -- fits the 48px mood icon
 local ROW_PAD   = 2
 
+local SORT_DEFAULT = { key = "since", asc = false }   -- newest first
+
+local function Lower(s) return (s or ""):lower() end
+
+local SORT_GETTERS = {
+    name  = function(e) return Lower(e.name) end,
+    realm = function(e) return Lower(e.realm) end,
+    role  = function(e)
+        local h = PD:GH_GetEntry(e.name, e.realm)
+        return Lower(h and h.role)
+    end,
+    since = function(e) return e.timestamp or 0 end,
+    note  = function(e) return Lower(e.note) end,
+}
+
 function PD:BuildPlayersPanel(panel)
     panel.scrollContent = PD:BuildListPanel(panel, {
         heads = {
-            { text = L["PL_COL_NAME"],  x = COL_NAME  },
-            { text = L["PL_COL_REALM"], x = COL_REALM },
-            { text = L["PL_COL_ROLE"],  x = COL_ROLE  },
-            { text = L["PL_COL_SINCE"], x = COL_SINCE },
-            { text = L["PL_COL_NOTE"],  x = COL_NOTE  },
+            { text = L["PL_COL_NAME"],  x = COL_NAME,  key = "name"  },
+            { text = L["PL_COL_REALM"], x = COL_REALM, key = "realm" },
+            { text = L["PL_COL_ROLE"],  x = COL_ROLE,  key = "role"  },
+            { text = L["PL_COL_SINCE"], x = COL_SINCE, key = "since", descFirst = true },
+            { text = L["PL_COL_NOTE"],  x = COL_NOTE,  key = "note"  },
+        },
+        sort = {
+            id       = "players",
+            default  = SORT_DEFAULT,
+            onChange = function() PD:RefreshMainWindow() end,
         },
         scroll     = "PDScrollFrame",
         content    = "PDScrollContent",
@@ -522,14 +542,9 @@ function PD:RefreshMainWindow()
     HideAllRows()
     PD:HideEmptyLabel(p1)
 
-    -- Sort by mood (good → neutral → bad), then by name
     local list = {}
     for _, entry in pairs(PD:GetAllEntries()) do list[#list + 1] = entry end
-    table.sort(list, function(a, b)
-        local ma, mb = PD:GetMood(a.mood).order, PD:GetMood(b.mood).order
-        if ma ~= mb then return ma < mb end
-        return (a.name or ""):lower() < (b.name or ""):lower()
-    end)
+    PD:SortList(list, "players", SORT_DEFAULT, SORT_GETTERS)
 
     local count = #list
     PD:SetSubtitle(PD.CountText(count, "SUB_NO_ENTRIES", "SUB_1_ENTRY", "SUB_N_ENTRIES"), p1)

@@ -374,13 +374,29 @@ local COL_NOTE   = PD.COL.LAST
 local ROW_H      = 52
 local ROW_PAD    = 2
 
+local SORT_DEFAULT = { key = "since", asc = false }   -- newest first
+
+local function Lower(s) return (s or ""):lower() end
+
+local SORT_GETTERS = {
+    name  = function(e) return Lower(e.name) end,
+    realm = function(e) return Lower(e.realm) end,
+    since = function(e) return e.timestamp or 0 end,
+    note  = function(e) return Lower(e.reason) end,
+}
+
 function PD:BuildIgnorePanel(panel)
     panel.ilContent = PD:BuildListPanel(panel, {
         heads = {
-            { text = L["IL_COL_NAME"],   x = COL_NAME   },
-            { text = L["IL_COL_REALM"],  x = COL_REALM  },
-            { text = L["IL_COL_LISTED"], x = COL_LISTED },
-            { text = L["IL_COL_NOTE"],   x = COL_NOTE   },
+            { text = L["IL_COL_NAME"],   x = COL_NAME,   key = "name"  },
+            { text = L["IL_COL_REALM"],  x = COL_REALM,  key = "realm" },
+            { text = L["IL_COL_LISTED"], x = COL_LISTED, key = "since", descFirst = true },
+            { text = L["IL_COL_NOTE"],   x = COL_NOTE,   key = "note"  },
+        },
+        sort = {
+            id       = "ignore",
+            default  = SORT_DEFAULT,
+            onChange = function() PD:RefreshIgnorePanel() end,
         },
         scroll     = "PDILScrollFrame",
         content    = "PDILScrollContent",
@@ -436,7 +452,7 @@ function PD:RefreshIgnorePanel()
 
     local list = {}
     for _, entry in pairs(PD:IL_GetAll()) do list[#list + 1] = entry end
-    table.sort(list, function(a, b) return (a.timestamp or 0) > (b.timestamp or 0) end)
+    PD:SortList(list, "ignore", SORT_DEFAULT, SORT_GETTERS)
 
     local count = #list
     PD:SetSubtitle(PD.CountText(count, "SUB_NO_IGNORED", "SUB_1_IGNORED", "SUB_N_IGNORED"), panel)

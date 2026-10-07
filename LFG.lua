@@ -3,7 +3,7 @@
 --  Premade Group Finder integration:
 --    • tooltip: warning plus ignore reason / dossier note of known
 --      players in the group
---    • "!IGNORED" warning in the search result list
+--    • "!IGNORED" / "!WARNING" (bad-mood dossier player) in the search result list
 -- ============================================================
 
 local PD = PlayerDossier
@@ -13,7 +13,7 @@ local L  = PD.L
 -- 1.  MEMBER CHECK (cached per search result)
 -- ================================================================
 
--- resultID → { hasIgnored, hasDossier, ignored = {name→realm}, dossier = {name→realm} }
+-- resultID → { hasIgnored, hasDossier, hasBad (non-ignored member with a bad mood), ignored = {name→realm}, dossier = {name→realm} }
 local resultCache = {}
 
 -- Lower-case name → entry for the ignore list and the dossier, built lazily.
@@ -38,7 +38,7 @@ end
 local function CheckResult(resultID)
     if resultCache[resultID] then return resultCache[resultID] end
 
-    local entry = { hasIgnored = false, hasDossier = false, ignored = {}, dossier = {} }
+    local entry = { hasIgnored = false, hasDossier = false, hasBad = false, ignored = {}, dossier = {} }
     resultCache[resultID] = entry
 
     local ok, info = pcall(C_LFGList.GetSearchResultInfo, resultID)
@@ -72,6 +72,11 @@ local function CheckResult(resultID)
         if dosRealm and not entry.dossier[name] then
             entry.hasDossier    = true
             entry.dossier[name] = dosRealm
+            -- Ignored players already get the stronger ignore warning
+            local dEntry = PD:GetEntry(name, dosRealm)
+            if not ignRealm and dEntry and dEntry.mood == "negative" then
+                entry.hasBad = true
+            end
         end
     end
 
@@ -136,10 +141,15 @@ local function CheckAndWarnTooltip(frame)
     local others = SortedNames(entry.dossier, entry.ignored)
     if #others > 0 then
         if entry.hasIgnored then GameTooltip:AddLine(" ") end
-        GameTooltip:AddLine("|cff9B82F3PlayerDossier:|r")
+        if entry.hasBad then
+            GameTooltip:AddLine("|cffff8800! " .. L["LFG_BAD_WARNING"] .. "|r")
+        else
+            GameTooltip:AddLine("|cff9B82F3PlayerDossier:|r")
+        end
         for _, name in ipairs(others) do
             local dEntry = PD:GetEntry(name, entry.dossier[name])
-            AddPlayerLine(name, dEntry and dEntry.note, "ffff88")
+            local bad    = dEntry and dEntry.mood == "negative"
+            AddPlayerLine(name, dEntry and dEntry.note, bad and "ffaa44" or "ffff88")
         end
     end
 
@@ -159,9 +169,13 @@ local function ApplyInlineWarning(frame)
     if not frame or not frame.resultID or not frame.Name then return end
     if not PD:OPT_Get("lfgInlineWarning") then return end
 
-    if CheckResult(frame.resultID).hasIgnored then
+    local entry = CheckResult(frame.resultID)
+    if entry.hasIgnored then
         frame.Name:SetText("|cffff2e2e!" .. L["LFG_INLINE_IGNORED"] .. "|r " .. (frame.Name:GetText() or ""))
         frame.Name:SetTextColor(1, 0.35, 0.35)
+    elseif entry.hasBad then
+        frame.Name:SetText("|cffff8800!" .. L["LFG_INLINE_BAD"] .. "|r " .. (frame.Name:GetText() or ""))
+        frame.Name:SetTextColor(1, 0.6, 0.2)
     end
 end
 
