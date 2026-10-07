@@ -10,6 +10,7 @@
 - Ignoring a player prefills the reason with their dossier note; both stay editable separately.
 
 ### Changed
+- Ignored players are hidden in the Dossier tab (their entry stays stored and returns when you unignore). The Ignore List menu no longer has the dossier entries.
 - Default sort in all tabs is "Since" (newest first). The Dossier tab no longer sorts by mood.
 
 ## [1.1.0] - 2026-10-06

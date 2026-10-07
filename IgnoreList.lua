@@ -51,7 +51,9 @@ local function GetNameCache()
     return nameCache
 end
 
+-- Ignored players are hidden in the Dossier tab, so both lists change
 local function RefreshPanelIfShown()
+    if PD.panel1 and PD.panel1:IsShown() then PD:RefreshMainWindow() end
     if PD.panel2 and PD.panel2:IsShown() then PD:RefreshIgnorePanel() end
 end
 
@@ -441,17 +443,6 @@ local function FillIgnoreRow(row, entry)
         root:CreateButton(L["BTN_COPY_NAME"], function()
             PD:ShowCopyPopup(eName .. "-" .. eRealm)
         end)
-        -- Mood/note live in the separate Player Dossier list
-        local dEntry = PD:GetEntry(eName, eRealm)
-        if dEntry then
-            root:CreateButton(L["BTN_EDIT_DOSSIER"], function()
-                PD:OpenNoteDialog(eName, eRealm, dEntry.class, dEntry.guid, dEntry.mood)
-            end)
-        else
-            root:CreateButton(L["MENU_ADD_DOSSIER"], function()
-                PD:OpenNoteDialog(eName, eRealm, nil, nil, "negative")
-            end)
-        end
     end)
 end
 

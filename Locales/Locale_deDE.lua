@@ -78,8 +78,6 @@ L["POPUP_IGNORE_TEXT"]   = "Grund für das Ignorieren von |cffffffff%s|r (option
 L["BTN_IGNORE_PLAIN"]    = "Ignorieren"
 L["POPUP_EDIT_REASON_TEXT"] = "Ignorier-Grund für |cffffffff%s|r:"
 L["BTN_EDIT_REASON"]     = "Grund bearbeiten"
-L["BTN_EDIT_DOSSIER"]    = "Notiz im Spieler-Dossier bearbeiten"
-L["MENU_ADD_DOSSIER"]    = "Ins Spieler-Dossier aufnehmen"
 
 -- ── Options panel ─────────────────────────────────────────────
 L["TAB_OPTIONS"]              = "Optionen"

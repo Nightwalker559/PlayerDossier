@@ -519,7 +519,10 @@ function PD:RefreshMainWindow()
     PD:HideEmptyLabel(p1)
 
     local list = {}
-    for _, entry in pairs(PD:GetAllEntries()) do list[#list + 1] = entry end
+    -- Ignored players live in the Ignore List tab only (their entry stays stored)
+    for _, entry in pairs(PD:GetAllEntries()) do
+        if not PD:IL_IsIgnored(entry.name, entry.realm) then list[#list + 1] = entry end
+    end
     PD:SortList(list, "players", SORT_DEFAULT, SORT_GETTERS)
 
     local count = #list

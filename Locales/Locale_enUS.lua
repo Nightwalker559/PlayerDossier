@@ -76,8 +76,6 @@ L["POPUP_IGNORE_TEXT"]   = "Reason for ignoring |cffffffff%s|r (optional):"
 L["BTN_IGNORE_PLAIN"]    = "Ignore"
 L["POPUP_EDIT_REASON_TEXT"] = "Ignore reason for |cffffffff%s|r:"
 L["BTN_EDIT_REASON"]     = "Edit reason"
-L["BTN_EDIT_DOSSIER"]    = "Edit note in Player Dossier"
-L["MENU_ADD_DOSSIER"]    = "Add to Player Dossier"
 
 -- ── Options panel ─────────────────────────────────────────────
 L["TAB_OPTIONS"]              = "Options"
