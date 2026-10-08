@@ -13,16 +13,23 @@ local L  = PD.L
 -- identical x values give an identical look.
 -- MODE is only used by the History tab. LAST is "Note" in the
 -- Dossier/Ignore List tabs but "Grouped" in History.
+-- Every header cell must fit its label plus the 14px sort arrow
+-- (localized labels like "Rolle"/"Modus"/"Gruppiert"), so the narrow
+-- columns are at least ~60px wide.
 -- ----------------------------------------------------------------
 PD.COL = {
     MOOD  = 4,    -- mood icon (Dossier and Ignore List tabs, no header)
     NAME  = 58,   -- leaves room for the 48px mood icon
-    REALM = 220,
-    ROLE  = 330,
-    MODE  = 370,  -- History only (only ever "M+<level>" - ScanGroup() filters on ^M%+)
-    SINCE = 440,
-    LAST  = 485,
+    REALM = 170,
+    ROLE  = 275,
+    MODE  = 335,  -- History only (only ever "M+<level>" - ScanGroup() filters on ^M%+)
+    SINCE = 400,
+    LAST  = 465,
 }
+
+-- Header cells start where the row labels start: scroll frame inset (4)
+-- + row inset (2) = 6px from the panel's left edge
+local HEADER_X = 6
 
 -- Alternating row background colors { even, odd }
 PD.ROW_TINT = {
@@ -135,10 +142,10 @@ function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
     for i, h in ipairs(heads) do
         local nextX = heads[i + 1] and heads[i + 1].x
         local width = nextX and (nextX - h.x - 4)
-            or (panel:GetWidth() - h.x - rightPad - 2)
+            or (panel:GetWidth() - h.x - rightPad - HEADER_X)
 
         local btn = CreateFrame("Button", nil, panel)
-        btn:SetPoint("TOPLEFT", panel, "TOPLEFT", h.x + 2, -2)
+        btn:SetPoint("TOPLEFT", panel, "TOPLEFT", h.x + HEADER_X, -2)
         btn:SetHeight(16)
         btn:SetWidth(width and width > 0 and width or 60)
 
@@ -429,7 +436,7 @@ function PD:ShowCopyPopup(text)
         eb:SetScript("OnEnterPressed",  function() f:Hide() end)
         eb:SetScript("OnKeyDown", function(_, key)
             if key == "C" and IsControlKeyDown() then
-                C_Timer.After(0, function() f:Hide() end)
+                RunNextFrame(function() f:Hide() end)
             end
         end)
         f.editBox = eb

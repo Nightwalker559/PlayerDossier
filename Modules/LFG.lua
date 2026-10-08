@@ -82,12 +82,11 @@ local function CheckResult(resultID)
 
     CheckMember(info.leaderName)
 
-    local okNum, numMembers = pcall(C_LFGList.GetNumSearchResultMembers, resultID)
-    if okNum and numMembers then
-        for i = 1, numMembers do
-            local okM, mName = pcall(C_LFGList.GetSearchResultMemberInfo, resultID, i)
-            if okM then CheckMember(mName) end
-        end
+    -- GetNumSearchResultMembers / GetSearchResultMemberInfo no longer exist;
+    -- the live API is info.numMembers + GetSearchResultPlayerInfo (name is nilable)
+    for i = 1, info.numMembers or 0 do
+        local okM, member = pcall(C_LFGList.GetSearchResultPlayerInfo, resultID, i)
+        if okM and member then CheckMember(member.name) end
     end
 
     return entry
@@ -170,13 +169,25 @@ local function ApplyInlineWarning(frame)
     if not PD:OPT_Get("lfgInlineWarning") then return end
 
     local entry = CheckResult(frame.resultID)
+    if not entry.hasIgnored and not entry.hasBad then return end
+
+    -- Blizzard fills Name from the (possibly secret) search result name;
+    -- a secret string can't be concatenated, so leave such rows alone.
+    local text = frame.Name:GetText()
+    if PD.IsSecret(text) then return end
+
     if entry.hasIgnored then
-        frame.Name:SetText("|cffff2e2e!" .. L["LFG_INLINE_IGNORED"] .. "|r " .. (frame.Name:GetText() or ""))
+        frame.Name:SetText("|cffff2e2e!" .. L["LFG_INLINE_IGNORED"] .. "|r " .. (text or ""))
         frame.Name:SetTextColor(1, 0.35, 0.35)
-    elseif entry.hasBad then
-        frame.Name:SetText("|cffff8800!" .. L["LFG_INLINE_BAD"] .. "|r " .. (frame.Name:GetText() or ""))
+    else
+        frame.Name:SetText("|cffff8800!" .. L["LFG_INLINE_BAD"] .. "|r " .. (text or ""))
         frame.Name:SetTextColor(1, 0.6, 0.2)
     end
+
+    -- LFGListSearchEntry_Update capped Name at 176px (165 for applications,
+    -- minus 22 with the voice chat icon) before our prefix made it longer.
+    local maxW = (frame.isApplication and 165 or 176) - (frame.VoiceChat and frame.VoiceChat:IsShown() and 22 or 0)
+    if frame.Name:GetWidth() > maxW then frame.Name:SetWidth(maxW) end
 end
 
 lfgFrame:SetScript("OnEvent", function()
@@ -196,11 +207,12 @@ local function HookOnce(fnName, hook)
     hooksecurefunc(fnName, hook)
 end
 
--- Hooks everything that exists yet; called again when the frame is shown
--- in case Blizzard's LFG code loaded later.
+-- Blizzard_GroupFinder is not load-on-demand, so both functions exist
+-- when our BuildUI callback runs. All hooks are hooksecurefunc post-hooks:
+-- they run after Blizzard's code and can't taint it.
 local function InstallHooks()
     HookOnce("LFGListSearchEntry_OnEnter", function(frame)
-        C_Timer.After(0.05, function()
+        RunNextFrame(function()
             if GameTooltip:IsShown() then CheckAndWarnTooltip(frame) end
         end)
     end)
@@ -216,15 +228,11 @@ function PD:InitLFG()
         GameTooltip:HookScript("OnShow", function(tt)
             local owner = tt:GetOwner()
             if owner and owner.resultID then
-                C_Timer.After(0.01, function()
+                RunNextFrame(function()
                     if tt:IsShown() then CheckAndWarnTooltip(owner) end
                 end)
             end
         end)
-    end
-
-    if LFGListFrame_Show then
-        hooksecurefunc("LFGListFrame_Show", InstallHooks)
     end
 end
 

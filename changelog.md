@@ -1,5 +1,17 @@
 # PlayerDossier – Changelog
 
+## [1.1.2] - 2026-10-08
+
+### Fixed
+- Column headers no longer cut off ("Rolle", "Seit"); shared column widths in all list tabs, headers aligned with the rows.
+- LFG: group members are checked again, not just the leader (old member API was removed).
+- LFG: inline warning skips secret group names and keeps the name inside Blizzard's width.
+- German LFG labels: "!IGNORIERT" / "!WARNUNG".
+
+### Internal
+- `RunNextFrame` instead of `C_Timer.After(0)` and the tiny LFG tooltip delays.
+- ElvUI minimap button skinned via the `LibDBIcon_IconCreated` callback instead of a 1 s timer.
+
 ## [1.1.1] - 2026-10-07
 
 ### New

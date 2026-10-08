@@ -130,7 +130,7 @@ local function LoadSkin()
                     local tab = _G["PDMainTab" .. i]
                     if tab then S:HandleTab(tab) end
                 end
-                C_Timer.After(0, function() ReflowTabs(self) end)
+                RunNextFrame(function() ReflowTabs(self) end)
             end)
         end)
     end
@@ -184,8 +184,17 @@ local function LoadSkin()
             end)
         end)
     end
-    SkinMinimapBtn()                -- if the button already exists
-    C_Timer.After(1, SkinMinimapBtn) -- otherwise LibDBIcon may not have registered yet
+    SkinMinimapBtn()    -- if the button already exists
+    -- otherwise skin it the moment LibDBIcon creates it
+    local DBIcon = LibStub and LibStub("LibDBIcon-1.0", true)
+    if DBIcon and not _G["LibDBIcon10_PlayerDossier"] then
+        DBIcon.RegisterCallback(PD, "LibDBIcon_IconCreated", function(_, _, name)
+            if name == PD.L["TT_TITLE"] then
+                DBIcon.UnregisterCallback(PD, "LibDBIcon_IconCreated")
+                SkinMinimapBtn()
+            end
+        end)
+    end
 
     -- ── Our StaticPopups (PD_*) ─────────────────────────────────
     hooksecurefunc("StaticPopup_Show", function(which)
@@ -214,7 +223,7 @@ PD.SelectTab = function(self, n)
     origSelectTab(self, n)
     -- PanelTemplates_SetTab & co. may have reset the anchors
     ReflowTabs(PD.mainFrame)
-    C_Timer.After(0, function() SkinTabContent(n) end)
+    RunNextFrame(function() SkinTabContent(n) end)
 end
 
 S:AddCallbackForAddon("PlayerDossier", "PlayerDossier", LoadSkin)
