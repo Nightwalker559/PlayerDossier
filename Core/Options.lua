@@ -48,11 +48,11 @@ function PD:BuildOptionsPanel(panel)
     -- Scroll box (static content) so everything fits
     local box = CreateFrame("Frame", nil, panel, "WowScrollBox")
     box:SetPoint("TOPLEFT",     panel, "TOPLEFT",      0, 0)
-    box:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 0)
+    box:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -18, 0)
 
-    local bar = CreateFrame("EventFrame", nil, panel, "WowTrimScrollBar")
-    bar:SetPoint("TOPLEFT",    box, "TOPRIGHT",    2, 0)
-    bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 2, 0)
+    local bar = CreateFrame("EventFrame", nil, panel, "MinimalScrollBar")
+    bar:SetPoint("TOPLEFT",    box, "TOPRIGHT",    5, -3)
+    bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 5, 3)
     panel.scrollBox, panel.scrollBar = box, bar
 
     -- Scroll content; all widgets live here. The view stretches it to the

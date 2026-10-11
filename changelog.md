@@ -9,7 +9,7 @@
 - ElvUI skin follows the new frames.
 
 ### Internal
-- `ButtonFrameTemplate` / `DefaultPanelTemplate`, `TabSystemTemplate`, `WowScrollBoxList` + `WowTrimScrollBar` with a data provider; the old row pool and `PanelTemplates_*` are gone.
+- `ButtonFrameTemplate` / `DefaultPanelTemplate`, `TabSystemTemplate`, `WowScrollBoxList` + `MinimalScrollBar` with a data provider; the old row pool and `PanelTemplates_*` are gone.
 
 ## [1.1.2] - 2026-10-08
 

@@ -31,8 +31,8 @@ PD.COL = {
 -- + row inset (2) = 6px from the panel's left edge
 local HEADER_X = 6
 
--- Space reserved at the right edge of a list panel for the trim scroll bar
-local LIST_BAR_W = 28
+-- Space reserved at the right edge of a list panel for the minimal scroll bar
+local LIST_BAR_W = 18
 
 -- Alternating row background colors { even, odd }
 PD.ROW_TINT = {
@@ -220,7 +220,7 @@ end
 
 -- ----------------------------------------------------------------
 -- List panel skeleton: column headers, a ScrollBox (WowScrollBoxList)
--- with a trim scroll bar, and a "Remove All" button in the button bar
+-- with a minimal scroll bar, and a "Remove All" button in the button bar
 -- of the main window. Rows are pooled by the ScrollBox and filled from
 -- a DataProvider (see RenderList).
 --
@@ -239,9 +239,9 @@ function PD:BuildListPanel(panel, spec)
     box:SetPoint("TOPLEFT",     panel, "TOPLEFT",      4,  -22)
     box:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -LIST_BAR_W, 4)
 
-    local bar = CreateFrame("EventFrame", nil, panel, "WowTrimScrollBar")
-    bar:SetPoint("TOPLEFT",    box, "TOPRIGHT",    2, 0)
-    bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 2, 0)
+    local bar = CreateFrame("EventFrame", nil, panel, "MinimalScrollBar")
+    bar:SetPoint("TOPLEFT",    box, "TOPRIGHT",    5, -3)
+    bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 5, 3)
 
     local pad, tint, fill = spec.pad, spec.tint, spec.fill
     local view = CreateScrollBoxListLinearView(pad, pad, 2, 2, pad)
