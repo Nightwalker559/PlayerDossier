@@ -1,6 +1,6 @@
 # PlayerDossier – Changelog
 
-## [Unreleased]
+## [1.1.3] - 2026-10-11
 
 ### Changed
 - Window rebuilt on the current Retail layout (12.1): button frame without portrait, entry count under the title, tabs below the window, "Remove All" in the button bar.

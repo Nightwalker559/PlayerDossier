@@ -53,7 +53,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 
 `/playerdossier` and `/dossier` work as aliases for `/pd`.
 
-The window has four tabs: **Dossier**, **Ignore List**, **History** and **Options**.
+The window uses the current Retail frame style (tabs below the window, modern scroll bars, ElvUI skin supported) and has four tabs: **Dossier**, **Ignore List**, **History** and **Options**.
 
 ## Options
 
