@@ -27,9 +27,12 @@ PD.COL = {
     LAST  = 465,
 }
 
--- Header cells start where the row labels start: scroll frame inset (4)
+-- Header cells start where the row labels start: scroll box inset (4)
 -- + row inset (2) = 6px from the panel's left edge
 local HEADER_X = 6
+
+-- Space reserved at the right edge of a list panel for the trim scroll bar
+local LIST_BAR_W = 28
 
 -- Alternating row background colors { even, odd }
 PD.ROW_TINT = {
@@ -50,6 +53,28 @@ function PD:MakeDraggable(f)
 end
 
 -- ----------------------------------------------------------------
+-- Small dialog shell (note dialog, copy popup): DefaultPanelTemplate
+-- (title bar + nine-slice border) with a close button and an inset
+-- for the content. Title via f:SetTitle(), content parent: f.Inset.
+-- ----------------------------------------------------------------
+function PD:CreateDialogFrame(name, width, height, strata)
+    local f = CreateFrame("Frame", name, UIParent, "DefaultPanelTemplate")
+    f:SetSize(width, height)
+    f:SetFrameStrata(strata or "DIALOG")
+    f:SetToplevel(true)
+    PD:MakeDraggable(f)
+    f:Hide()
+
+    f.CloseButton = CreateFrame("Button", nil, f, "UIPanelCloseButtonDefaultAnchors")
+
+    f.Inset = CreateFrame("Frame", nil, f, "InsetFrameTemplate")
+    f.Inset:SetFrameLevel(f:GetFrameLevel())
+    f.Inset:SetPoint("TOPLEFT",     f, "TOPLEFT",      4, -24)
+    f.Inset:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -6,   4)
+    return f
+end
+
+-- ----------------------------------------------------------------
 -- Shared table header for the Dossier/Ignore List/History tabs.
 -- Each header stretches to the next column (the last one to the
 -- panel's right edge) so long labels aren't cut off.
@@ -58,7 +83,7 @@ end
 --            key=<sort key>, descFirst=<true: first click sorts descending> }, ... }
 --        sorted by x ascending. Heads with a key are clickable.
 -- sort:  { id=<saved sort state name>, default={key=,asc=}, onChange=fn }
--- rightPad: distance to the panel's right edge (default 26 = scrollbar)
+-- rightPad: distance to the panel's right edge (default LIST_BAR_W = scroll bar)
 -- ----------------------------------------------------------------
 
 -- Default for every list tab: "Since", newest first
@@ -124,7 +149,7 @@ function PD:RestyleSortArrows()
 end
 
 function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
-    rightPad = rightPad or 26
+    rightPad = rightPad or LIST_BAR_W
     local buttons = {}
 
     local function UpdateArrows()
@@ -194,112 +219,80 @@ function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
 end
 
 -- ----------------------------------------------------------------
--- Frame pool for list rows. Returns GetRow(parent), HideAll().
--- ----------------------------------------------------------------
-function PD:NewRowPool()
-    local pool, used = {}, 0
-    local function GetRow(parent)
-        used = used + 1
-        local r = pool[used]
-        if not r then
-            r = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-            pool[used] = r
-        else
-            r:SetParent(parent)
-            r:Show()
-        end
-        return r
-    end
-    local function HideAll()
-        for i = 1, used do pool[i]:Hide() end
-        used = 0
-    end
-    return GetRow, HideAll
-end
-
--- ----------------------------------------------------------------
--- List panel skeleton: column headers, scroll frame and a
--- "Remove All" button. Returns the scroll content frame.
+-- List panel skeleton: column headers, a ScrollBox (WowScrollBoxList)
+-- with a trim scroll bar, and a "Remove All" button in the button bar
+-- of the main window. Rows are pooled by the ScrollBox and filled from
+-- a DataProvider (see RenderList).
 --
--- spec = { heads, sort, scroll, content, clearBtn, clearPopup }
+-- spec = { heads, sort, rowH, pad, tint, fill, clearPopup }
 --   sort: see BuildColumnHeaders.
---   scroll/content/clearBtn: global frame names (ElvUI skin looks
---   them up by name); clearPopup: StaticPopup shown by the button.
+--   rowH/pad: row height and spacing; tint: one of PD.ROW_TINT.
+--   fill(row, entry): fills a (recycled) row.
+--   clearPopup: StaticPopup shown by the "Remove All" button.
+-- Sets panel.scrollBox, panel.scrollBar, panel.clearBtn (the ElvUI
+-- skin looks them up there).
 -- ----------------------------------------------------------------
 function PD:BuildListPanel(panel, spec)
     PD:BuildColumnHeaders(panel, spec.heads, nil, spec.sort)
 
-    local sf = CreateFrame("ScrollFrame", spec.scroll, panel, "UIPanelScrollFrameTemplate")
-    sf:SetPoint("TOPLEFT",     panel, "TOPLEFT",     4,  -22)
-    sf:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -26, 32)
-    local content = CreateFrame("Frame", spec.content, sf)
-    content:SetWidth(sf:GetWidth())
-    content:SetHeight(1)
-    sf:SetScrollChild(content)
+    local box = CreateFrame("Frame", nil, panel, "WowScrollBoxList")
+    box:SetPoint("TOPLEFT",     panel, "TOPLEFT",      4,  -22)
+    box:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -LIST_BAR_W, 4)
 
-    local clearBtn = CreateFrame("Button", spec.clearBtn, panel, "UIPanelButtonTemplate")
+    local bar = CreateFrame("EventFrame", nil, panel, "WowTrimScrollBar")
+    bar:SetPoint("TOPLEFT",    box, "TOPRIGHT",    2, 0)
+    bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 2, 0)
+
+    local pad, tint, fill = spec.pad, spec.tint, spec.fill
+    local view = CreateScrollBoxListLinearView(pad, pad, 2, 2, pad)
+    view:SetElementExtent(spec.rowH)
+    view:SetElementInitializer("Button", function(row, data)
+        if not row.stripe then
+            row.stripe = row:CreateTexture(nil, "BACKGROUND")
+            row.stripe:SetAllPoints()
+            local hl = row:CreateTexture(nil, "HIGHLIGHT")
+            hl:SetAllPoints()
+            hl:SetColorTexture(1, 1, 1, 0.05)
+            hl:SetBlendMode("ADD")
+        end
+        row.stripe:SetColorTexture(unpack(tint[data.tint]))
+        fill(row, data.entry)
+    end)
+    ScrollUtil.InitScrollBoxListWithScrollBar(box, bar, view)
+
+    -- Button bar of the main window (panel is a child of it)
+    local clearBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     clearBtn:SetSize(120, 22)
     clearBtn:SetText(L["BTN_CLEAR_ALL"])
-    clearBtn:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 4, 6)
+    clearBtn:SetPoint("BOTTOMLEFT", panel:GetParent(), "BOTTOMLEFT", 8, 4)
     clearBtn:SetScript("OnClick", function() StaticPopup_Show(spec.clearPopup) end)
 
-    return content
+    panel.scrollBox, panel.scrollBar, panel.clearBtn = box, bar, clearBtn
 end
 
--- ----------------------------------------------------------------
--- Row helpers
--- ----------------------------------------------------------------
-
--- Sizes/positions a pooled row inside the scroll content and applies
--- the striped background. tint: one of PD.ROW_TINT.
-function PD:SetupRow(row, content, index, rowH, pad, tint)
-    row:SetSize(content:GetWidth() - 4, rowH)
-    row:ClearAllPoints()
-    row:SetPoint("TOPLEFT", content, "TOPLEFT", 2, -pad - (index - 1) * (rowH + pad))
-    if not row.pdBackdrop then
-        row.pdBackdrop = true
-        row:SetBackdrop({ bgFile = "Interface/Tooltips/UI-Tooltip-Background" })
-    end
-    row:SetBackdropColor(unpack(tint[index % 2 == 0 and 1 or 2]))
-
-    row:EnableMouse(true)
-    if not row.hlTex then
-        row.hlTex = row:CreateTexture(nil, "HIGHLIGHT")
-        row.hlTex:SetAllPoints()
-        row.hlTex:SetColorTexture(1, 1, 1, 0.05)
-        row.hlTex:SetBlendMode("ADD")
-    end
-end
-
--- Sets the scroll content height after `count` rows
-function PD:FinishList(content, count, rowH, pad)
-    content:SetHeight(2 * pad + count * (rowH + pad))
-end
-
--- Fills a list tab: sorts the entries, sets the subtitle and shows either
--- the empty label or one row per entry.
--- o = { panel, content, list, getRow, hideAll, sortId, getters,
---       subtitle = {noneKey, oneKey, manyKey}, empty = {text, top, height},
---       rowH, pad, tint, fill = function(row, entry) }
+-- Fills a list tab: sorts the entries, sets the subtitle, hands the rows
+-- to the ScrollBox and shows the empty label if there are none.
+-- o = { panel, list, sortId, getters,
+--       subtitle = {noneKey, oneKey, manyKey}, empty = {text, top} }
 function PD:RenderList(o)
-    o.hideAll()
+    local panel = o.panel
     PD:SortList(o.list, o.sortId, PD.SORT_DEFAULT, o.getters)
 
     local count = #o.list
-    PD:SetSubtitle(PD.CountText(count, unpack(o.subtitle)), o.panel)
+    PD:SetSubtitle(PD.CountText(count, unpack(o.subtitle)), panel)
+
+    -- Alternating row tint: index into the tint table (1 = even, 2 = odd)
+    local data = {}
+    for i, e in ipairs(o.list) do
+        data[i] = { entry = e, tint = i % 2 == 0 and 1 or 2 }
+    end
+    panel.scrollBox:SetDataProvider(CreateDataProvider(data), ScrollBoxConstants.RetainScrollPosition)
 
     if count == 0 then
-        PD:ShowEmptyLabel(o.panel, o.content, o.empty[1], o.empty[2], o.empty[3])
-        return
+        PD:ShowEmptyLabel(panel, o.empty[1], o.empty[2])
+    else
+        PD:HideEmptyLabel(panel)
     end
-    PD:HideEmptyLabel(o.panel)
-
-    for i, e in ipairs(o.list) do
-        local row = o.getRow(o.content)
-        PD:SetupRow(row, o.content, i, o.rowH, o.pad, o.tint)
-        o.fill(row, e)
-    end
-    PD:FinishList(o.content, count, o.rowH, o.pad)
 end
 
 -- Returns row[key], creating the FontString on first use.
@@ -380,15 +373,14 @@ end
 -- Empty-state label and subtitle
 -- ----------------------------------------------------------------
 
-function PD:ShowEmptyLabel(panel, content, text, top, height)
+function PD:ShowEmptyLabel(panel, text, top)
     if not panel.emptyLabel then
-        panel.emptyLabel = content:CreateFontString(nil, "OVERLAY", "GameFontDisable")
-        panel.emptyLabel:SetPoint("TOP", content, "TOP", 0, -top)
+        panel.emptyLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontDisable")
+        panel.emptyLabel:SetPoint("TOP", panel.scrollBox, "TOP", 0, -top)
         panel.emptyLabel:SetText(text)
         panel.emptyLabel:SetJustifyH("CENTER")
     end
     panel.emptyLabel:Show()
-    content:SetHeight(height)
 end
 
 function PD:HideEmptyLabel(panel)
@@ -417,12 +409,8 @@ local copyPopup
 
 function PD:ShowCopyPopup(text)
     if not copyPopup then
-        local f = CreateFrame("Frame", "PDCopyPopup", UIParent, "BasicFrameTemplateWithInset")
-        f:SetSize(320, 70)
-        f:SetFrameStrata("TOOLTIP")
-        PD:MakeDraggable(f)
-        f:Hide()
-        f.TitleText:SetText(L["COPY_POPUP_TITLE"])
+        local f = PD:CreateDialogFrame("PDCopyPopup", 320, 90, "TOOLTIP")
+        f:SetTitle(L["COPY_POPUP_TITLE"])
         f:SetScript("OnKeyDown", function(self, key)
             if key == "ESCAPE" then self:Hide() end
         end)
@@ -430,7 +418,7 @@ function PD:ShowCopyPopup(text)
 
         local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
         eb:SetSize(280, 20)
-        eb:SetPoint("CENTER", f.InsetBg, "CENTER", 0, 0)
+        eb:SetPoint("CENTER", f.Inset, "CENTER", 0, 0)
         eb:SetAutoFocus(true)
         eb:SetScript("OnEscapePressed", function() f:Hide() end)
         eb:SetScript("OnEnterPressed",  function() f:Hide() end)

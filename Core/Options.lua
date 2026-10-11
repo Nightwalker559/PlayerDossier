@@ -45,15 +45,22 @@ end
 local INDENT = 8
 
 function PD:BuildOptionsPanel(panel)
-    -- Scroll frame so everything fits
-    local sf = CreateFrame("ScrollFrame", "PDOptScrollFrame", panel, "UIPanelScrollFrameTemplate")
-    sf:SetPoint("TOPLEFT",     panel, "TOPLEFT",     0,  0)
-    sf:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -26, 0)
+    -- Scroll box (static content) so everything fits
+    local box = CreateFrame("Frame", nil, panel, "WowScrollBox")
+    box:SetPoint("TOPLEFT",     panel, "TOPLEFT",      0, 0)
+    box:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", -28, 0)
 
-    local p = CreateFrame("Frame", nil, sf)   -- scroll content; all widgets live here
-    p:SetWidth(sf:GetWidth())
+    local bar = CreateFrame("EventFrame", nil, panel, "WowTrimScrollBar")
+    bar:SetPoint("TOPLEFT",    box, "TOPRIGHT",    2, 0)
+    bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 2, 0)
+    panel.scrollBox, panel.scrollBar = box, bar
+
+    -- Scroll content; all widgets live here. The view stretches it to the
+    -- box width, `scrollable` makes the view adopt it.
+    local p = CreateFrame("Frame", nil, box)
+    p.scrollable = true
+    p:SetWidth(box:GetWidth())
     p:SetHeight(600)  -- adjusted at the end
-    sf:SetScrollChild(p)
 
     local yOff = -8
     panel._optCbs = {}   -- option key → checkbox (also used by the ElvUI skin)
@@ -163,7 +170,8 @@ function PD:BuildOptionsPanel(panel)
     importInfo:SetWordWrap(true)
     importInfo:SetText(L["OPT_IMPORT_INFO"])
     yOff = yOff - 30
-    local importBtn = CreateFrame("Button", "PDImportIgnoreBtn", p, "UIPanelButtonTemplate")
+    local importBtn = CreateFrame("Button", nil, p, "UIPanelButtonTemplate")
+    panel.importBtn = importBtn   -- ElvUI skin
     importBtn:SetSize(280, 24)
     importBtn:SetText(L["OPT_IMPORT_BTN"])
     importBtn:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT, yOff)
@@ -184,6 +192,10 @@ function PD:BuildOptionsPanel(panel)
     MakeCB("chatMessages", L["OPT_CHAT_MESSAGES"], L["OPT_CHAT_MESSAGES_SUB"])
 
     p:SetHeight(math.abs(yOff) + 20)
+
+    local view = CreateScrollBoxLinearView()
+    view:SetPanExtent(40)   -- pixels per mouse wheel step
+    ScrollUtil.InitScrollBoxWithScrollBar(box, bar, view)
 end
 
 -- ================================================================

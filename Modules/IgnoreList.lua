@@ -370,8 +370,6 @@ end
 -- 6.  IGNORE LIST PANEL
 -- ================================================================
 
-local GetILRow, HideAllILRows = PD:NewRowPool()
-
 local COL_NAME   = PD.COL.NAME
 local COL_REALM  = PD.COL.REALM
 local COL_ROLE   = PD.COL.ROLE
@@ -389,27 +387,6 @@ local SORT_GETTERS = {
     since = function(e) return e.timestamp or 0 end,
     note  = function(e) return Lower(e.reason) end,
 }
-
-function PD:BuildIgnorePanel(panel)
-    panel.ilContent = PD:BuildListPanel(panel, {
-        heads = {
-            { text = L["IL_COL_NAME"],   x = COL_NAME,   key = "name"  },
-            { text = L["IL_COL_REALM"],  x = COL_REALM,  key = "realm" },
-            { text = L["PL_COL_ROLE"],   x = COL_ROLE,   key = "role"  },
-            { text = L["IL_COL_LISTED"], x = COL_LISTED, key = "since", descFirst = true },
-            { text = L["IL_COL_NOTE"],   x = COL_NOTE,   key = "note"  },
-        },
-        sort = {
-            id       = "ignore",
-            default  = PD.SORT_DEFAULT,
-            onChange = function() PD:RefreshIgnorePanel() end,
-        },
-        scroll     = "PDILScrollFrame",
-        content    = "PDILScrollContent",
-        clearBtn   = "PDClearIgnoreBtn",
-        clearPopup = "PD_CONFIRM_CLEAR_IGNORE",
-    })
-end
 
 local function FillIgnoreRow(row, entry)
     -- Same columns as the Dossier tab; ignored players always get the bad mood icon
@@ -436,25 +413,40 @@ local function FillIgnoreRow(row, entry)
     end)
 end
 
+function PD:BuildIgnorePanel(panel)
+    PD:BuildListPanel(panel, {
+        heads = {
+            { text = L["IL_COL_NAME"],   x = COL_NAME,   key = "name"  },
+            { text = L["IL_COL_REALM"],  x = COL_REALM,  key = "realm" },
+            { text = L["PL_COL_ROLE"],   x = COL_ROLE,   key = "role"  },
+            { text = L["IL_COL_LISTED"], x = COL_LISTED, key = "since", descFirst = true },
+            { text = L["IL_COL_NOTE"],   x = COL_NOTE,   key = "note"  },
+        },
+        sort = {
+            id       = "ignore",
+            default  = PD.SORT_DEFAULT,
+            onChange = function() PD:RefreshIgnorePanel() end,
+        },
+        rowH       = ROW_H,
+        pad        = ROW_PAD,
+        tint       = PD.ROW_TINT.ignore,
+        fill       = FillIgnoreRow,
+        clearPopup = "PD_CONFIRM_CLEAR_IGNORE",
+    })
+end
+
 function PD:RefreshIgnorePanel()
     local panel = PD.panel2
-    if not panel or not panel.ilContent then return end
+    if not panel or not panel.scrollBox then return end
     local list = {}
     for _, entry in pairs(PD:IL_GetAll()) do list[#list + 1] = entry end
     PD:RenderList({
         panel    = panel,
-        content  = panel.ilContent,
         list     = list,
-        getRow   = GetILRow,
-        hideAll  = HideAllILRows,
         sortId   = "ignore",
         getters  = SORT_GETTERS,
         subtitle = { "SUB_NO_IGNORED", "SUB_1_IGNORED", "SUB_N_IGNORED" },
-        empty    = { L["IL_EMPTY"], 40, 100 },
-        rowH     = ROW_H,
-        pad      = ROW_PAD,
-        tint     = PD.ROW_TINT.ignore,
-        fill     = FillIgnoreRow,
+        empty    = { L["IL_EMPTY"], 40 },
     })
 end
 

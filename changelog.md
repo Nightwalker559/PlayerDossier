@@ -1,5 +1,16 @@
 # PlayerDossier – Changelog
 
+## [Unreleased]
+
+### Changed
+- Window rebuilt on the current Retail layout (12.1): portrait frame with the addon icon, entry count under the title, tabs below the window, "Remove All" in the button bar.
+- Lists and the Options tab use the modern scroll bar. The window is a bit taller (520).
+- Note dialog and copy popup use the current panel frame.
+- ElvUI skin follows the new frames.
+
+### Internal
+- `ButtonFrameTemplate` / `DefaultPanelTemplate`, `TabSystemTemplate`, `WowScrollBoxList` + `WowTrimScrollBar` with a data provider; the old row pool and `PanelTemplates_*` are gone.
+
 ## [1.1.2] - 2026-10-08
 
 ### Fixed

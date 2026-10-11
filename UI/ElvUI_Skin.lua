@@ -28,68 +28,55 @@ local function SkinFrame(frame, template)
     frame:SetTemplate(template or "Transparent")
 end
 
-local function SkinScrollFrame(sf)
-    if sf and sf.ScrollBar then
-        SkinOnce(sf, function() S:HandleScrollBar(sf.ScrollBar) end)
-    end
+local function SkinTrimScrollBar(bar)
+    if bar then SkinOnce(bar, function() S:HandleTrimScrollBar(bar) end) end
 end
 
 local function SkinButton(btn)
-    SkinOnce(btn, function() S:HandleButton(btn) end)
+    if btn then SkinOnce(btn, function() S:HandleButton(btn) end) end
+end
+
+-- Portrait-style frame (main window and dialogs: ElvUI strips the Blizzard
+-- art, skins the inset and the close button and applies its template)
+local function SkinPanelFrame(frame)
+    S:HandlePortraitFrame(frame)
 end
 
 -- ----------------------------------------------------------------
--- Tabs: left-aligned with ~1px of visible gap.
+-- Tabs (TabSystem below the main window).
 --
 -- ElvUI's S:HandleTab pulls the visible backdrop inwards by a fixed
--- inset (3px on retail) instead of anchoring it to the frame edges.
--- A plain 1px anchor gap between tab frames therefore yields a gap of
--- 2×inset between the visible backdrops. The anchor offset has to
--- compensate (negative) to leave ~1px visible, the same approach
--- ElvUI addon skins commonly use. -5 is confirmed correct for this
--- skin (E.Modern returned wrong/nil on some ElvUI versions, which
--- made a -19 fallback the original bug).
+-- inset instead of anchoring it to the frame edges, so the layout
+-- spacing has to be negative to leave ~1px visible between tabs and the
+-- strip has to move left a bit. Same values as ElvUI's own TabSystem
+-- skins (Player Spells, Friends).
 -- ----------------------------------------------------------------
-local TAB_START_X = 4
-local TAB_GAP     = -5
-local NUM_TABS    = 4
+local TAB_SPACING = -5
+local TAB_START_X = -3
 
-local function ReflowTabs(mainFrame)
-    if not mainFrame then return end
-    local prevTab
-    for i = 1, NUM_TABS do
-        local tab = _G["PDMainTab" .. i]
-        if tab then
-            tab:ClearAllPoints()
-            if prevTab then
-                tab:SetPoint("LEFT", prevTab, "RIGHT", TAB_GAP, 0)
-            else
-                tab:SetPoint("BOTTOMLEFT", mainFrame, "BOTTOMLEFT", TAB_START_X, -28)
-            end
-            prevTab = tab
-        end
+local function SkinTabSystem(tabSystem, mainFrame)
+    for _, tab in next, { tabSystem:GetChildren() } do
+        S:HandleTab(tab)
     end
+    tabSystem.spacing = TAB_SPACING
+    tabSystem:MarkDirty()
+    tabSystem:ClearAllPoints()
+    tabSystem:SetPoint("TOPLEFT", mainFrame, "BOTTOMLEFT", TAB_START_X, 0)
 end
 
 -- ----------------------------------------------------------------
 -- Tab content: panels are built lazily, so each one is skinned
 -- the first time its tab is selected.
 -- ----------------------------------------------------------------
-local TAB_WIDGETS = {
-    [1] = { scroll = "PDScrollFrame",     button = "PDClearPlayersBtn" },
-    [2] = { scroll = "PDILScrollFrame",   button = "PDClearIgnoreBtn" },
-    [3] = { scroll = "PDHistScrollFrame", button = "PDClearHistoryBtn" },
-    [4] = { scroll = "PDOptScrollFrame",  button = "PDImportIgnoreBtn", checkboxes = true },
-}
-
 local function SkinTabContent(n)
-    local w = TAB_WIDGETS[n]
-    if not w then return end
-    SkinScrollFrame(_G[w.scroll])
-    SkinButton(_G[w.button])
+    local panel = PD["panel" .. n]
+    if not panel then return end
+    SkinTrimScrollBar(panel.scrollBar)
+    SkinButton(panel.clearBtn)     -- list tabs
+    SkinButton(panel.importBtn)    -- options tab
 
-    if w.checkboxes and PD.panel4 and PD.panel4._optCbs then
-        for _, cb in pairs(PD.panel4._optCbs) do
+    if panel._optCbs then
+        for _, cb in pairs(panel._optCbs) do
             SkinOnce(cb, function() S:HandleCheckBox(cb) end)
         end
     end
@@ -119,18 +106,8 @@ local function LoadSkin()
     if f then
         f:HookScript("OnShow", function(self)
             SkinOnce(self, function()
-                SkinFrame(self)
-                S:HandleCloseButton(self.CloseButton)
-                if self.TitleBg then self.TitleBg:StripTextures() end
-                if self.InsetBg then self.InsetBg:StripTextures() end
-
-                -- UI.lua already sets the correct tab width; here the tabs
-                -- are additionally re-laid-out left-aligned
-                for i = 1, NUM_TABS do
-                    local tab = _G["PDMainTab" .. i]
-                    if tab then S:HandleTab(tab) end
-                end
-                RunNextFrame(function() ReflowTabs(self) end)
+                SkinPanelFrame(self)
+                SkinTabSystem(self.TabSystem, self)
             end)
         end)
     end
@@ -140,8 +117,7 @@ local function LoadSkin()
     if nd then
         nd:HookScript("OnShow", function(self)
             SkinOnce(self, function()
-                SkinFrame(self)
-                S:HandleCloseButton(self.CloseButton)
+                SkinPanelFrame(self)
 
                 local eb = _G["PDNoteEditBox"]
                 if eb then S:HandleEditBox(eb) end
@@ -161,9 +137,8 @@ local function LoadSkin()
     hooksecurefunc(PD, "ShowCopyPopup", function()
         SkinOnce(_G["PDCopyPopup"], function(cp)
             pcall(function()
-                SkinFrame(cp)
-                if cp.CloseButton then S:HandleCloseButton(cp.CloseButton) end
-                if cp.editBox     then S:HandleEditBox(cp.editBox) end
+                SkinPanelFrame(cp)
+                if cp.editBox then S:HandleEditBox(cp.editBox) end
             end)
         end)
     end)
@@ -216,13 +191,11 @@ local function LoadSkin()
 end
 
 -- ----------------------------------------------------------------
--- Hook SelectTab: re-align the tabs and skin freshly built panels
+-- Hook SelectTab: skin freshly built panels
 -- ----------------------------------------------------------------
 local origSelectTab = PD.SelectTab
 PD.SelectTab = function(self, n)
     origSelectTab(self, n)
-    -- PanelTemplates_SetTab & co. may have reset the anchors
-    ReflowTabs(PD.mainFrame)
     RunNextFrame(function() SkinTabContent(n) end)
 end
 

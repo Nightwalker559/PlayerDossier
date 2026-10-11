@@ -99,13 +99,9 @@ end
 
 function PD:BuildNoteDialog()
     if PD.noteDialog then return end
-    local f = CreateFrame("Frame", "PDNoteDialog", UIParent, "BasicFrameTemplateWithInset")
-    f:SetSize(340, 185)
+    local f = PD:CreateDialogFrame("PDNoteDialog", 340, 185)
     f:SetPoint("CENTER")
-    PD:MakeDraggable(f)
-    f:SetFrameStrata("DIALOG")
     f:SetFrameLevel(100)
-    f:Hide()
     f:SetScript("OnKeyDown", function(_, key)
         if key == "ESCAPE" then CloseNoteDialog() end
     end)
@@ -113,7 +109,7 @@ function PD:BuildNoteDialog()
 
     f.editBox = CreateFrame("EditBox", "PDNoteEditBox", f, "InputBoxTemplate")
     f.editBox:SetSize(295, 20)
-    f.editBox:SetPoint("TOP", f.InsetBg, "TOP", 0, -12)
+    f.editBox:SetPoint("TOP", f.Inset, "TOP", 0, -12)
     f.editBox:SetMaxLetters(60)
     f.editBox:SetAutoFocus(false)
     f.editBox:SetScript("OnEscapePressed", CloseNoteDialog)
@@ -135,13 +131,13 @@ function PD:BuildNoteDialog()
     local saveBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     saveBtn:SetSize(90, 22)
     saveBtn:SetText(L["BTN_SAVE"])
-    saveBtn:SetPoint("BOTTOMLEFT", f.InsetBg, "BOTTOMLEFT", 8, 8)
+    saveBtn:SetPoint("BOTTOMLEFT", f.Inset, "BOTTOMLEFT", 8, 8)
     saveBtn:SetScript("OnClick", SaveNote)
 
     local cancelBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     cancelBtn:SetSize(90, 22)
     cancelBtn:SetText(L["BTN_CANCEL"])
-    cancelBtn:SetPoint("BOTTOMRIGHT", f.InsetBg, "BOTTOMRIGHT", -8, 8)
+    cancelBtn:SetPoint("BOTTOMRIGHT", f.Inset, "BOTTOMRIGHT", -8, 8)
     cancelBtn:SetScript("OnClick", CloseNoteDialog)
 
     PD.noteDialog = f
@@ -157,7 +153,7 @@ function PD:OpenNoteDialog(name, realm, class, guid, defaultMood)
     pending.mood  = defaultMood or (entry and entry.mood) or "positive"
     if not PD.noteDialog then PD:BuildNoteDialog() end
     local f = PD.noteDialog
-    f.TitleText:SetText(string.format(L["NOTE_TITLE"], name))
+    f:SetTitle(string.format(L["NOTE_TITLE"], name))
     f.editBox:SetText(entry and entry.note or "")
     f.editBox:SetFocus()
     f.editBox:HighlightText()
@@ -308,8 +304,8 @@ local TABS = {
 
 local function MakePanel(parent)
     local p = CreateFrame("Frame", nil, parent)
-    p:SetPoint("TOPLEFT",     parent.InsetBg, "TOPLEFT",     0, -18)
-    p:SetPoint("BOTTOMRIGHT", parent.InsetBg, "BOTTOMRIGHT", 0,   0)
+    p:SetPoint("TOPLEFT",     parent.Inset, "TOPLEFT",     0, -4)
+    p:SetPoint("BOTTOMRIGHT", parent.Inset, "BOTTOMRIGHT", 0,  0)
     p:Hide()
     return p
 end
@@ -317,25 +313,24 @@ end
 function PD:BuildUI()
     if PD.mainFrame then return end
 
-    local f = CreateFrame("Frame", "PDMainFrame", UIParent, "BasicFrameTemplateWithInset")
-    f:SetSize(620, 460)
+    -- ButtonFrameTemplate: portrait frame with an inset and a button bar
+    local f = CreateFrame("Frame", "PDMainFrame", UIParent, "ButtonFrameTemplate")
+    f:SetSize(620, 520)
     f:SetPoint("CENTER")
     PD:MakeDraggable(f)
     f:SetFrameStrata("DIALOG")
+    f:SetToplevel(true)
     f:Hide()
 
-    -- Stretch the title across the whole bar (the close button sits on top by default)
-    f.TitleText:SetText("PlayerDossier")
-    f.TitleText:ClearAllPoints()
-    f.TitleText:SetPoint("LEFT",  f.TitleBg, "LEFT",  5, 0)
-    f.TitleText:SetPoint("RIGHT", f.TitleBg, "RIGHT", -5, 0)
-    f.TitleText:SetJustifyH("CENTER")
+    f:SetTitle("PlayerDossier")
+    f:SetPortraitToAsset("Interface\\AddOns\\PlayerDossier\\Media\\icon")
 
     -- ESC closes the window (WoW standard via UISpecialFrames)
     tinsert(UISpecialFrames, "PDMainFrame")
 
-    f.subtitle = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    f.subtitle:SetPoint("TOP", f.InsetBg, "TOP", 0, -4)
+    -- Entry count, centered in the space between the title and the inset
+    f.subtitle = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    f.subtitle:SetPoint("TOP", f, "TOP", 0, -36)
 
     -- One panel per tab (PD.panel1 … PD.panel4)
     f.panels = {}
@@ -344,34 +339,21 @@ function PD:BuildUI()
         PD["panel" .. i] = f.panels[i]
     end
 
-    -- Tab buttons (PanelTabButtonTemplate, classic WoW look)
-    f.tabs = {}
-    for i, def in ipairs(TABS) do
-        local tab = CreateFrame("Button", "PDMainTab" .. i, f, "PanelTabButtonTemplate")
-        tab:SetText(L[def.label])
-        tab:SetID(i)
-        tab:SetScript("OnClick", function() PD:SelectTab(i) end)
-        f.tabs[i] = tab
+    -- Tabs below the window (TabSystem). The callback returns true because
+    -- SelectTab already updates the visual selection (it is also used for
+    -- non-click navigation like the slash commands).
+    local tabSystem = CreateFrame("Frame", nil, f, "TabSystemTemplate")
+    tabSystem.minTabWidth = 100
+    tabSystem.maxTabWidth = 150
+    tabSystem:SetPoint("TOPLEFT", f, "BOTTOMLEFT", 22, 2)
+    tabSystem:SetTabSelectedCallback(function(tabID)
+        PD:SelectTab(tabID)
+        return true
+    end)
+    for _, def in ipairs(TABS) do
+        tabSystem:AddTab(L[def.label])   -- tab id = index in TABS
     end
-
-    -- All tabs get the width of the widest label (+30px padding so no text is cut off)
-    local maxW = 80
-    for _, tab in ipairs(f.tabs) do
-        local fs = tab:GetFontString()
-        if fs then maxW = math.max(maxW, fs:GetStringWidth()) end
-    end
-    maxW = math.ceil(maxW) + 30
-
-    for i, tab in ipairs(f.tabs) do
-        tab:SetWidth(maxW)
-        PanelTemplates_TabResize(tab, 0)
-        if i == 1 then
-            tab:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 10, -28)
-        else
-            tab:SetPoint("LEFT", f.tabs[i - 1], "RIGHT", 2, 0)
-        end
-    end
-    PanelTemplates_SetNumTabs(f, #TABS)
+    f.TabSystem = tabSystem
 
     PD.mainFrame = f
 
@@ -387,13 +369,7 @@ function PD:SelectTab(n)
     local f = PD.mainFrame
     if not f then return end
     activeTab = n
-    PanelTemplates_SetTab(f, n)
-
-    -- Keep the tab text centered (PanelTabButtonTemplate shifts it when selected)
-    for i, tab in ipairs(f.tabs) do
-        local fs = tab:GetFontString()
-        if fs then fs:SetPoint("CENTER", tab, "CENTER", 0, i == n and 0 or 1) end
-    end
+    f.TabSystem:SetTabVisuallySelected(n)
     for i, panel in ipairs(f.panels) do
         panel:SetShown(i == n)
     end
@@ -431,8 +407,6 @@ function PD:ToggleMainWindow() PD:OpenOnTab(1) end
 -- 6.  DOSSIER PANEL
 -- ================================================================
 
-local GetRow, HideAllRows = PD:NewRowPool()
-
 local COL_NAME  = PD.COL.NAME
 local COL_REALM = PD.COL.REALM
 local COL_ROLE  = PD.COL.ROLE
@@ -450,27 +424,6 @@ local SORT_GETTERS = {
     since = function(e) return e.timestamp or 0 end,
     note  = function(e) return Lower(e.note) end,
 }
-
-function PD:BuildPlayersPanel(panel)
-    panel.scrollContent = PD:BuildListPanel(panel, {
-        heads = {
-            { text = L["PL_COL_NAME"],  x = COL_NAME,  key = "name"  },
-            { text = L["PL_COL_REALM"], x = COL_REALM, key = "realm" },
-            { text = L["PL_COL_ROLE"],  x = COL_ROLE,  key = "role"  },
-            { text = L["PL_COL_SINCE"], x = COL_SINCE, key = "since", descFirst = true },
-            { text = L["PL_COL_NOTE"],  x = COL_NOTE,  key = "note"  },
-        },
-        sort = {
-            id       = "players",
-            default  = PD.SORT_DEFAULT,
-            onChange = function() PD:RefreshMainWindow() end,
-        },
-        scroll     = "PDScrollFrame",
-        content    = "PDScrollContent",
-        clearBtn   = "PDClearPlayersBtn",
-        clearPopup = "PD_CONFIRM_CLEAR_PLAYERS",
-    })
-end
 
 local function FillPlayerRow(row, e)
     PD:FillPlayerCols(row, e, {
@@ -502,22 +455,37 @@ local function FillPlayerRow(row, e)
     end)
 end
 
+function PD:BuildPlayersPanel(panel)
+    PD:BuildListPanel(panel, {
+        heads = {
+            { text = L["PL_COL_NAME"],  x = COL_NAME,  key = "name"  },
+            { text = L["PL_COL_REALM"], x = COL_REALM, key = "realm" },
+            { text = L["PL_COL_ROLE"],  x = COL_ROLE,  key = "role"  },
+            { text = L["PL_COL_SINCE"], x = COL_SINCE, key = "since", descFirst = true },
+            { text = L["PL_COL_NOTE"],  x = COL_NOTE,  key = "note"  },
+        },
+        sort = {
+            id       = "players",
+            default  = PD.SORT_DEFAULT,
+            onChange = function() PD:RefreshMainWindow() end,
+        },
+        rowH       = ROW_H,
+        pad        = ROW_PAD,
+        tint       = PD.ROW_TINT.default,
+        fill       = FillPlayerRow,
+        clearPopup = "PD_CONFIRM_CLEAR_PLAYERS",
+    })
+end
+
 function PD:RefreshMainWindow()
     local p1 = PD.panel1
-    if not p1 then return end
+    if not p1 or not p1.scrollBox then return end
     PD:RenderList({
         panel    = p1,
-        content  = p1.scrollContent,
         list     = PD:GetVisibleEntries(),
-        getRow   = GetRow,
-        hideAll  = HideAllRows,
         sortId   = "players",
         getters  = SORT_GETTERS,
         subtitle = { "SUB_NO_ENTRIES", "SUB_1_ENTRY", "SUB_N_ENTRIES" },
-        empty    = { L["EMPTY_PLAYERS"], 60, 160 },
-        rowH     = ROW_H,
-        pad      = ROW_PAD,
-        tint     = PD.ROW_TINT.default,
-        fill     = FillPlayerRow,
+        empty    = { L["EMPTY_PLAYERS"], 60 },
     })
 end

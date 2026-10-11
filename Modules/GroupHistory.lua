@@ -170,8 +170,6 @@ function PD:GH_RoleText(role)
     return L[ROLE_KEYS[role] or "HIST_ROLE_NONE"]
 end
 
-local GetHistRow, HideAllHistRows = PD:NewRowPool()
-
 local COL_NAME  = PD.COL.NAME
 local COL_REALM = PD.COL.REALM
 local COL_ROLE  = PD.COL.ROLE
@@ -191,28 +189,6 @@ local SORT_GETTERS = {
     since = function(e) return e.lastSeen or 0 end,
     count = function(e) return e.count or 1 end,
 }
-
-function PD:BuildHistoryPanel(panel)
-    panel.histContent = PD:BuildListPanel(panel, {
-        heads = {
-            { text = L["HIST_COL_NAME"],  x = COL_NAME,  key = "name"  },
-            { text = L["HIST_COL_REALM"], x = COL_REALM, key = "realm" },
-            { text = L["HIST_COL_ROLE"],  x = COL_ROLE,  key = "role"  },
-            { text = L["HIST_COL_MODE"],  x = COL_MODE,  key = "mode"  },
-            { text = L["HIST_COL_SEEN"],  x = COL_SEEN,  key = "since", descFirst = true },
-            { text = L["HIST_COL_COUNT"], x = COL_COUNT, key = "count", descFirst = true },
-        },
-        sort = {
-            id       = "history",
-            default  = PD.SORT_DEFAULT,
-            onChange = function() PD:RefreshHistoryPanel() end,
-        },
-        scroll     = "PDHistScrollFrame",
-        content    = "PDHistScrollContent",
-        clearBtn   = "PDClearHistoryBtn",
-        clearPopup = "PD_CONFIRM_CLEAR_HISTORY",
-    })
-end
 
 local function FillHistoryRow(row, e)
     local nameLabel = PD:RowLabel(row, "nameLabel", COL_NAME, COL_REALM)
@@ -256,24 +232,40 @@ local function FillHistoryRow(row, e)
     end)
 end
 
+function PD:BuildHistoryPanel(panel)
+    PD:BuildListPanel(panel, {
+        heads = {
+            { text = L["HIST_COL_NAME"],  x = COL_NAME,  key = "name"  },
+            { text = L["HIST_COL_REALM"], x = COL_REALM, key = "realm" },
+            { text = L["HIST_COL_ROLE"],  x = COL_ROLE,  key = "role"  },
+            { text = L["HIST_COL_MODE"],  x = COL_MODE,  key = "mode"  },
+            { text = L["HIST_COL_SEEN"],  x = COL_SEEN,  key = "since", descFirst = true },
+            { text = L["HIST_COL_COUNT"], x = COL_COUNT, key = "count", descFirst = true },
+        },
+        sort = {
+            id       = "history",
+            default  = PD.SORT_DEFAULT,
+            onChange = function() PD:RefreshHistoryPanel() end,
+        },
+        rowH       = ROW_H,
+        pad        = ROW_PAD,
+        tint       = PD.ROW_TINT.default,
+        fill       = FillHistoryRow,
+        clearPopup = "PD_CONFIRM_CLEAR_HISTORY",
+    })
+end
+
 function PD:RefreshHistoryPanel()
     local panel = PD.panel3
-    if not panel or not panel.histContent then return end
+    if not panel or not panel.scrollBox then return end
     local list = {}
     for _, e in pairs(PD:GH_GetAll()) do list[#list + 1] = e end
     PD:RenderList({
         panel    = panel,
-        content  = panel.histContent,
         list     = list,
-        getRow   = GetHistRow,
-        hideAll  = HideAllHistRows,
         sortId   = "history",
         getters  = SORT_GETTERS,
         subtitle = { "SUB_NO_HISTORY", "SUB_1_HISTORY", "SUB_N_HISTORY" },
-        empty    = { L["HIST_EMPTY"], 40, 100 },
-        rowH     = ROW_H,
-        pad      = ROW_PAD,
-        tint     = PD.ROW_TINT.default,
-        fill     = FillHistoryRow,
+        empty    = { L["HIST_EMPTY"], 40 },
     })
 end
