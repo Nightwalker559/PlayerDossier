@@ -3,7 +3,7 @@
 ## [Unreleased]
 
 ### Changed
-- Window rebuilt on the current Retail layout (12.1): portrait frame with the addon icon, entry count under the title, tabs below the window, "Remove All" in the button bar.
+- Window rebuilt on the current Retail layout (12.1): button frame without portrait, entry count under the title, tabs below the window, "Remove All" in the button bar.
 - Lists and the Options tab use the modern scroll bar. The window is a bit taller (520).
 - Note dialog and copy popup use the current panel frame.
 - ElvUI skin follows the new frames.

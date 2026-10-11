@@ -323,7 +323,7 @@ function PD:BuildUI()
     f:Hide()
 
     f:SetTitle("PlayerDossier")
-    f:SetPortraitToAsset("Interface\\AddOns\\PlayerDossier\\Media\\icon")
+    ButtonFrameTemplate_HidePortrait(f)   -- plain border, no portrait ring
 
     -- ESC closes the window (WoW standard via UISpecialFrames)
     tinsert(UISpecialFrames, "PDMainFrame")
