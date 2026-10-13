@@ -23,7 +23,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 
 ### Group Finder (LFG)
 - **Inline warning:** a group whose leader or member is on your ignore list is marked red with "!IGNORED" directly in the search results, no hover needed. Players with a **Bad** mood in your dossier get an orange "!WARNING" instead.
-- **Tooltip:** hover a group to see which of its members are on your ignore list (with the ignore reason) or in your dossier (with your note, bad-mood players highlighted). Works with players from other realms and alongside Raider.IO tooltips.
+- **Tooltip:** hover a group to see which of its members are on your ignore list (with the ignore reason) or in your dossier (with your note, bad-mood players highlighted). The same hint shows when you hover an applicant to your own group. Works with players from other realms and alongside Raider.IO tooltips.
 
 ### Group History
 - Automatically logs everyone you group with in **Mythic+** (class, role, M+ level, last seen, how often you grouped).
