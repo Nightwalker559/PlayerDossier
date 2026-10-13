@@ -1,5 +1,24 @@
 # PlayerDossier – Changelog
 
+## [1.1.4] - 2026-10-13
+
+### Fixed
+- Auto-decline: duels from ignored players are declined again (the old call no longer exists, it errored instead).
+- Auto-decline: the duel, Group Finder invite, guild invite and trade popups close after declining.
+- LFG: the tooltip lines for ignored/known players show on a real mouse-over (the old hook never saw it).
+- "Show reunion & warning messages" now also silences the "ignored player in your group" warning.
+- "Block ignored players from chat" also hides text emotes (/spit, /dance ...).
+- Options tab: wrapped descriptions no longer run into the next row or section header.
+- Secret values: group size in the Group Finder and role/class/GUID in the group history can no longer cause errors.
+
+### Changed
+- Chat filters use `ChatFrameUtil.AddMessageEventFilter` (the old name is a deprecated alias).
+- Ignore reason dialog uses `GetEditBox()`.
+
+### Internal
+- All options, hooks, menu tags and templates checked against the 12.1 Blizzard UI source.
+- Smoke test: the mock no longer provides `DeclineDuel`, new checks for popups, tooltip, secret values.
+
 ## [1.1.3] - 2026-10-11
 
 ### Changed

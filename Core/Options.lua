@@ -59,7 +59,9 @@ function PD:BuildOptionsPanel(panel)
     -- box width, `scrollable` makes the view adopt it.
     local p = CreateFrame("Frame", nil, box)
     p.scrollable = true
-    p:SetWidth(box:GetWidth())
+    local boxWidth = box:GetWidth()
+    if not boxWidth or boxWidth < 100 then boxWidth = 540 end   -- layout not resolved yet
+    p:SetWidth(boxWidth)
     p:SetHeight(600)  -- adjusted at the end
 
     local yOff = -8
@@ -105,8 +107,11 @@ function PD:BuildOptionsPanel(panel)
         local rowHeight = 40
         if sub then
             local s = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-            s:SetPoint("TOPLEFT",  cb, "BOTTOMLEFT", 28, -2)
-            s:SetPoint("TOPRIGHT", p,  "TOPRIGHT",  -INDENT, -2)
+            s:SetPoint("TOPLEFT", cb, "BOTTOMLEFT", 28, -2)
+            -- Fixed width (not a TOPRIGHT anchor): the anchor isn't resolved yet
+            -- while the panel is built, so GetStringHeight would miss wrapped
+            -- lines and the next row would sit on top of the text.
+            s:SetWidth(boxWidth - 28 - INDENT * 2)
             s:SetJustifyH("LEFT")
             s:SetWordWrap(true)
             s:SetText(sub)
@@ -137,8 +142,8 @@ function PD:BuildOptionsPanel(panel)
     local cbDecline, rhDecline = MakeCB("autoDecline", L["OPT_AUTO_DECLINE"], L["OPT_AUTO_DECLINE_SUB"])
     -- Orange hint about the auto-decline limitation
     local declineNote = p:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    declineNote:SetPoint("TOPLEFT",  cbDecline, "BOTTOMLEFT", 28, -10 - (rhDecline - 40))
-    declineNote:SetPoint("TOPRIGHT", p,         "TOPRIGHT",  -INDENT, -10 - (rhDecline - 40))
+    declineNote:SetPoint("TOPLEFT", cbDecline, "BOTTOMLEFT", 28, -10 - (rhDecline - 40))
+    declineNote:SetWidth(boxWidth - 28 - INDENT * 2)
     declineNote:SetTextColor(1, 0.6, 0, 1)
     declineNote:SetWordWrap(true)
     declineNote:SetJustifyH("LEFT")

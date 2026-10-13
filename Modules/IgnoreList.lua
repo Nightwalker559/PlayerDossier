@@ -216,7 +216,7 @@ function PD:IL_ShouldFilterSender(name, realm)
 end
 
 local FILTERED_CHAT_EVENTS = {
-    "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_EMOTE", "CHAT_MSG_CHANNEL",
+    "CHAT_MSG_SAY", "CHAT_MSG_YELL", "CHAT_MSG_EMOTE", "CHAT_MSG_TEXT_EMOTE", "CHAT_MSG_CHANNEL",
     "CHAT_MSG_WHISPER", "CHAT_MSG_GUILD", "CHAT_MSG_OFFICER",
     "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER",
     "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_RAID_WARNING",
@@ -233,38 +233,51 @@ local function ChatFilter(_, _, _, sender)
     end
 end
 
+-- ChatFrame_AddMessageEventFilter is only a deprecated alias of this
+local AddChatFilter = (ChatFrameUtil and ChatFrameUtil.AddMessageEventFilter) or ChatFrame_AddMessageEventFilter
 for _, ev in ipairs(FILTERED_CHAT_EVENTS) do
-    ChatFrame_AddMessageEventFilter(ev, ChatFilter)
+    AddChatFilter(ev, ChatFilter)
 end
 
 -- ================================================================
 -- 4.  EVENTS  (auto-decline, group warning)
 -- ================================================================
 
--- Auto-decline handlers; each gets the sender's name
+-- Auto-decline handlers; each gets the sender's name. Blizzard shows its own
+-- popup from a handler of the same event, so the popups are hidden one frame
+-- later (works whichever handler runs first).
 local DECLINE = {
     DUEL_REQUESTED = function(name)
-        DeclineDuel()
+        CancelDuel()   -- what the DUEL_REQUESTED popup calls on "Decline"
+        RunNextFrame(function() StaticPopup_Hide("DUEL_REQUESTED") end)
         if PD:OPT_Get("chatMessages") then
             print(string.format(L["IL_DUEL_DECLINED"], name))
         end
     end,
     PARTY_INVITE_REQUEST = function()
         DeclineGroup()
-        StaticPopup_Hide("PARTY_INVITE")
+        RunNextFrame(function()
+            StaticPopup_Hide("PARTY_INVITE")
+            -- invites with a role (Group Finder) use this popup instead
+            if LFGInvitePopup then StaticPopupSpecial_Hide(LFGInvitePopup) end
+        end)
     end,
     GUILD_INVITE_REQUEST = function()
         DeclineGuild()
+        RunNextFrame(function()
+            if GuildInviteFrame then StaticPopupSpecial_Hide(GuildInviteFrame) end
+        end)
     end,
     TRADE_REQUEST = function()
         -- The request is only a popup at this point, TradeFrame isn't shown yet
-        if CancelTrade then CancelTrade() end
-        StaticPopup_Hide("TRADE")
+        CancelTrade()
+        RunNextFrame(function() StaticPopup_Hide("TRADE") end)
     end,
 }
 
 -- Prints a warning for every ignored player currently in the group
 local function WarnIgnoredInGroup()
+    if not PD:OPT_Get("chatMessages") then return end
     PD:ForEachGroupMember(function(_, name, realm)
         local entry = PD:IL_GetAll()[PD:GetKey(name, realm)]
         if entry then
@@ -324,7 +337,7 @@ local function ReasonDialog(textKey, acceptKey, onAccept, onShow)
         editBoxWidth = 220,
         OnShow       = onShow,
         OnAccept = function(self)
-            onAccept(pending.name, pending.realm, strtrim(self.EditBox:GetText()))
+            onAccept(pending.name, pending.realm, strtrim(self:GetEditBox():GetText()))
             wipe(pending)
         end,
         OnCancel = function() wipe(pending) end,
@@ -340,8 +353,9 @@ end
 
 -- Fills the edit box with pending.reason
 local function PrefillReason(self)
-    self.EditBox:SetText(pending.reason or "")
-    self.EditBox:HighlightText()
+    local editBox = self:GetEditBox()
+    editBox:SetText(pending.reason or "")
+    editBox:HighlightText()
 end
 
 StaticPopupDialogs["PD_IGNORE_REASON"] = ReasonDialog(

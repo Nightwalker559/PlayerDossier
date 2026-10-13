@@ -131,7 +131,12 @@ local function ScanGroup()
         local key      = PD:GetKey(name, realm)
         local _, class = UnitClass(unit)
         local role     = UnitGroupRolesAssigned and UnitGroupRolesAssigned(unit) or "NONE"
-        PD:GH_Record(name, realm, class, role, UnitGUID(unit), not seenThisGroup[key], context)
+        local guid     = UnitGUID(unit)
+        -- identity values can be secret in restricted contexts: store nothing then
+        if PD.IsSecret(class) then class = nil end
+        if PD.IsSecret(role)  then role  = "NONE" end
+        if PD.IsSecret(guid)  then guid  = nil end
+        PD:GH_Record(name, realm, class, role, guid, not seenThisGroup[key], context)
         seenThisGroup[key] = true
     end)
 end

@@ -84,7 +84,9 @@ local function CheckResult(resultID)
 
     -- GetNumSearchResultMembers / GetSearchResultMemberInfo no longer exist;
     -- the live API is info.numMembers + GetSearchResultPlayerInfo (name is nilable)
-    for i = 1, info.numMembers or 0 do
+    local numMembers = info.numMembers
+    if PD.IsSecret(numMembers) then numMembers = 0 end   -- a secret number can't drive a loop
+    for i = 1, numMembers or 0 do
         local okM, member = pcall(C_LFGList.GetSearchResultPlayerInfo, resultID, i)
         if okM and member then CheckMember(member.name) end
     end
@@ -199,41 +201,47 @@ end)
 -- 4.  HOOKS
 -- ================================================================
 
-local hooked = {}
+-- Blizzard builds the tooltip in LFGListSearchEntry_OnEnter; our lines go on
+-- one frame later. Several triggers in the same frame add them only once.
+local tipPending = {}
 
-local function HookOnce(fnName, hook)
-    if hooked[fnName] or not _G[fnName] then return end
-    hooked[fnName] = true
-    hooksecurefunc(fnName, hook)
-end
-
--- Blizzard_GroupFinder is not load-on-demand, so both functions exist
--- when our BuildUI callback runs. All hooks are hooksecurefunc post-hooks:
--- they run after Blizzard's code and can't taint it.
-local function InstallHooks()
-    HookOnce("LFGListSearchEntry_OnEnter", function(frame)
-        RunNextFrame(function()
-            if GameTooltip:IsShown() then CheckAndWarnTooltip(frame) end
-        end)
+local function ScheduleTooltip(frame)
+    if tipPending[frame] then return end
+    tipPending[frame] = true
+    RunNextFrame(function()
+        tipPending[frame] = nil
+        if GameTooltip:IsShown() and GameTooltip:GetOwner() == frame then
+            CheckAndWarnTooltip(frame)
+        end
     end)
-    HookOnce("LFGListSearchEntry_Update", ApplyInlineWarning)
 end
 
--- Called from the BuildUI callback below
-function PD:InitLFG()
-    InstallHooks()
+local hookedRows = setmetatable({}, { __mode = "k" })
 
-    if not hooked["LFGListSearchEntry_OnEnter"] then
-        -- Fallback: recognize LFG rows via the tooltip's owner
-        GameTooltip:HookScript("OnShow", function(tt)
-            local owner = tt:GetOwner()
-            if owner and owner.resultID then
-                RunNextFrame(function()
-                    if tt:IsShown() then CheckAndWarnTooltip(owner) end
-                end)
-            end
-        end)
+-- Post-hook of LFGListSearchEntry_Update (runs for every row whenever Blizzard
+-- fills it). The XML binds LFGListSearchEntry_OnEnter by value, so hooking the
+-- global would miss real mouse-overs; each row gets a HookScript instead.
+local function OnRowUpdate(frame)
+    if not hookedRows[frame] then
+        hookedRows[frame] = true
+        frame:HookScript("OnEnter", ScheduleTooltip)
     end
+    ApplyInlineWarning(frame)
+
+    -- While hovered, Update calls OnEnter by its global name and rebuilds the
+    -- tooltip without our lines
+    if GameTooltip:GetOwner() == frame then ScheduleTooltip(frame) end
+end
+
+-- Called from the BuildUI callback below. Blizzard_GroupFinder is not
+-- load-on-demand, so the function exists by now. hooksecurefunc/HookScript
+-- are post-hooks: they run after Blizzard's code and can't taint it.
+local lfgHooked = false
+
+function PD:InitLFG()
+    if lfgHooked or not LFGListSearchEntry_Update then return end
+    lfgHooked = true
+    hooksecurefunc("LFGListSearchEntry_Update", OnRowUpdate)
 end
 
 PD:OnBuildUI(function() PD:InitLFG() end)
