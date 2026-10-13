@@ -136,7 +136,7 @@ L["OPT_AUTO_DECLINE_NOTE"] = "Note: May not work if another addon auto-accepts i
 -- ── LFG ──────────────────────────────────────────────────────
 L["OPT_SEC_LFG"]         = "Group Finder (LFG)"
 L["OPT_LFG_INLINE"]      = "Show inline warning in group list"
-L["OPT_LFG_INLINE_SUB"]  = "Colors the group name red and adds \"!IGNORED\" in front of it in the search result row when the leader or a member is on the PlayerDossier ignore list. Players with a bad mood in the dossier get an orange \"!WARNING\" instead. Applicants to your own group get a red \"!\" in front of their name.
+L["OPT_LFG_INLINE_SUB"]  = "Colors the group name red and adds \"!IGNORED\" in front of it in the search result row when the leader or a member is on the PlayerDossier ignore list. Players with a bad mood in the dossier get an orange \"!WARNING\" instead. Applicants to your own group get a red \"!\" in front of their name."
 L["OPT_LFG_ALLOW"]       = "Allow Group Finder invites from ignored players"
 L["OPT_LFG_ALLOW_SUB"]   = "Auto-decline lets through the invite you get after signing up for a group in the Group Finder, even if its leader is on your ignore list. Normal invites are still declined."
 L["LFG_IGNORED_WARNING"]  = "Ignored player in this group:"
