@@ -1,48 +1,111 @@
 -- ============================================================
 --  PlayerDossier – Minimap.lua
---  Minimap button via LibDataBroker-1.1 + LibDBIcon-1.0.
+--  Minimap button without a library: left click toggles the window,
+--  right click opens a small menu, dragging moves it around the minimap.
 --
---  Why LibDBIcon instead of a hand-made button?
---  → Interoperability: MinimapButtonButton, MinimapButtonHub,
---    Bazooka, ChocolateBar, ElvUI etc. all collect LibDBIcon
---    buttons, so ours shows up where users expect addon buttons.
+--  The button is named like a LibDBIcon button ("LibDBIcon10_<name>", with
+--  .icon / .border / .background) so button collectors and minimap skins
+--  (ElvUI, MinimapButtonButton, ...) pick it up like any other addon button.
 --
 --  SavedVariables (inside PlayerDossierDB):
 --    PlayerDossierDB.minimap = { minimapPos = 225, hide = false }
 -- ============================================================
 
-local PD     = PlayerDossier
-local L      = PD.L
-local LDB    = LibStub("LibDataBroker-1.1")
-local DBIcon = LibStub("LibDBIcon-1.0")
+local PD = PlayerDossier
+local L  = PD.L
 
-local BUTTON_NAME = L["TT_TITLE"]
+local BUTTON_NAME = "LibDBIcon10_PlayerDossier"
+
+local button
 
 -- ----------------------------------------------------------------
--- LDB data object ("launcher" is the standard type for addon buttons)
+-- Position
 -- ----------------------------------------------------------------
 
-local ldbObject = LDB:NewDataObject(BUTTON_NAME, {
-    type  = "launcher",
-    label = BUTTON_NAME,
-    icon  = "Interface/AddOns/PlayerDossier/Media/icon.tga",
+-- Places the button on the minimap edge at `angle` degrees (0 = right,
+-- counterclockwise); square minimaps (ElvUI) get it on the square edge.
+local function Place(angle)
+    -- A collector moved the button into its own bar: leave the layout to it.
+    if button:GetParent() ~= Minimap then return end
+    local rad = math.rad(angle)
+    local dx, dy = math.cos(rad), math.sin(rad)
+    local half = Minimap:GetWidth() / 2 + 5
+    local shape = GetMinimapShape and GetMinimapShape() or "ROUND"
+    if shape ~= "ROUND" then
+        local m = math.max(math.abs(dx), math.abs(dy))
+        dx, dy = dx / m, dy / m
+    end
+    button:ClearAllPoints()
+    button:SetPoint("CENTER", Minimap, "CENTER", dx * half, dy * half)
+end
 
-    OnClick = function(self, button)
-        if button == "LeftButton" then
-            PD:ToggleMainWindow()
-        elseif button == "RightButton" then
+local function UpdateAngleFromCursor()
+    local mx, my = Minimap:GetCenter()
+    local cx, cy = GetCursorPosition()
+    local scale = Minimap:GetEffectiveScale()
+    local angle = math.deg(math.atan2(cy / scale - my, cx / scale - mx))
+    PlayerDossierDB.minimap.minimapPos = angle
+    Place(angle)
+end
+
+-- ----------------------------------------------------------------
+-- Button
+-- ----------------------------------------------------------------
+
+local function ShowTooltip(self)
+    GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+    GameTooltip:AddLine(L["TT_TITLE"], 0.608, 0.510, 0.961)
+    GameTooltip:AddLine(L["TT_LEFTCLICK"] .. "\n" .. L["TT_RIGHTCLICK"], 1, 1, 1, true)
+    local count = PD:Count()
+    GameTooltip:AddLine(string.format(L["TT_N_ENTRIES"], count,
+        count == 1 and L["entry"] or L["entries"]), 1, 1, 1)
+    GameTooltip:Show()
+end
+
+local function CreateButton()
+    local b = CreateFrame("Button", BUTTON_NAME, Minimap)
+    b:SetSize(31, 31)
+    b:SetFrameStrata("MEDIUM")
+    b:SetFrameLevel(8)
+    b:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    b:RegisterForDrag("LeftButton")
+    b:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+
+    local bg = b:CreateTexture(nil, "BACKGROUND")
+    bg:SetSize(20, 20)
+    bg:SetPoint("TOPLEFT", 7, -5)
+    bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+
+    local icon = b:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(17, 17)
+    icon:SetPoint("TOPLEFT", 7, -6)
+    icon:SetTexture("Interface\\AddOns\\PlayerDossier\\Media\\icon.tga")
+    icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
+
+    local border = b:CreateTexture(nil, "OVERLAY")
+    border:SetSize(50, 50)
+    border:SetPoint("TOPLEFT")
+    border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    b.icon, b.border, b.background = icon, border, bg
+
+    b:SetScript("OnClick", function(_, mouseButton)
+        if mouseButton == "RightButton" then
             PD:ShowMinimapContextMenu()
+        else
+            PD:ToggleMainWindow()
         end
-    end,
+    end)
+    b:SetScript("OnDragStart", function(self)
+        GameTooltip:Hide()
+        self:SetScript("OnUpdate", UpdateAngleFromCursor)
+    end)
+    b:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
+    b:SetScript("OnEnter", ShowTooltip)
+    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    OnTooltipShow = function(tooltip)
-        tooltip:AddLine(L["TT_TITLE"], 0.608, 0.510, 0.961)
-        tooltip:AddLine(L["TT_LEFTCLICK"] .. "\n" .. L["TT_RIGHTCLICK"], 1, 1, 1, true)
-        local count = PD:Count()
-        tooltip:AddLine(string.format(L["TT_N_ENTRIES"], count,
-            count == 1 and L["entry"] or L["entries"]), 1, 1, 1)
-    end,
-})
+    if PD.SkinMinimapButton then PD.SkinMinimapButton(b) end   -- ElvUI skin (loaded last)
+    return b
+end
 
 -- ----------------------------------------------------------------
 -- Show / hide
@@ -53,14 +116,35 @@ function PD:IsMinimapHidden()
     return mm and mm.hide or false
 end
 
+-- Button bars (LuckyoneUI) re-collect on ElvUI's minimap update; a button
+-- without LibDBIcon has to ask for it, or the gap of a hidden button stays
+-- until the next reload.
+local function NotifyButtonBars()
+    local E = ElvUI and ElvUI[1]
+    local minimap = E and E.GetModule and E:GetModule("Minimap", true)
+    if minimap and minimap.UpdateSettings then pcall(minimap.UpdateSettings, minimap) end
+end
+
+local function Apply()
+    if PD:IsMinimapHidden() then
+        if button then button:Hide() end
+        return
+    end
+    if not button then button = CreateButton() end
+    Place(PlayerDossierDB.minimap.minimapPos)
+    button:Show()
+end
+
 function PD:MinimapShow()
-    if PlayerDossierDB.minimap then PlayerDossierDB.minimap.hide = false end
-    DBIcon:Show(BUTTON_NAME)
+    PlayerDossierDB.minimap.hide = false
+    Apply()
+    NotifyButtonBars()
 end
 
 function PD:MinimapHide()
-    if PlayerDossierDB.minimap then PlayerDossierDB.minimap.hide = true end
-    DBIcon:Hide(BUTTON_NAME)
+    PlayerDossierDB.minimap.hide = true
+    Apply()
+    NotifyButtonBars()
 end
 
 local function ToggleMinimapButton()
@@ -73,18 +157,14 @@ local function ToggleMinimapButton()
 end
 
 -- ----------------------------------------------------------------
--- Registration (runs after the main window was built)
+-- Creation (runs after the main window was built)
 -- ----------------------------------------------------------------
 
 PD:OnBuildUI(function()
-    if DBIcon:IsRegistered(BUTTON_NAME) then return end
-
-    -- LibDBIcon reads/writes minimapPos and hide directly in this table
-    PlayerDossierDB.minimap = PlayerDossierDB.minimap or {
-        minimapPos = 225,   -- degrees, 225° = upper left (LibDBIcon convention)
-        hide       = false,
-    }
-    DBIcon:Register(BUTTON_NAME, ldbObject, PlayerDossierDB.minimap)
+    local mm = PlayerDossierDB.minimap or {}
+    PlayerDossierDB.minimap = mm
+    mm.minimapPos = mm.minimapPos or 225   -- degrees, 225° = upper left
+    Apply()
 end)
 
 -- ----------------------------------------------------------------
@@ -106,6 +186,4 @@ end
 -- Slash command: /pd minimap
 -- ----------------------------------------------------------------
 
-PD.commands.minimap = function()
-    if DBIcon:IsRegistered(BUTTON_NAME) then ToggleMinimapButton() end
-end
+PD.commands.minimap = ToggleMinimapButton

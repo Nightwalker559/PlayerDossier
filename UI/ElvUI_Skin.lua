@@ -143,9 +143,11 @@ local function LoadSkin()
         end)
     end)
 
-    -- ── Minimap button (LibDBIcon) ──────────────────────────────
-    local function SkinMinimapBtn()
-        SkinOnce(_G["LibDBIcon10_PlayerDossier"], function(btn)
+    -- ── Minimap button ───────────────────────────────────────────
+    -- Minimap.lua calls this when it creates the button (the skin may load
+    -- before or after that); also covers a button that already exists.
+    function PD.SkinMinimapButton(btn)
+        SkinOnce(btn, function()
             pcall(function()
                 if btn.SetBackdrop then btn:SetBackdrop(nil) end
                 if btn.border     then btn.border:Hide()     end
@@ -159,17 +161,7 @@ local function LoadSkin()
             end)
         end)
     end
-    SkinMinimapBtn()    -- if the button already exists
-    -- otherwise skin it the moment LibDBIcon creates it
-    local DBIcon = LibStub and LibStub("LibDBIcon-1.0", true)
-    if DBIcon and not _G["LibDBIcon10_PlayerDossier"] then
-        DBIcon.RegisterCallback(PD, "LibDBIcon_IconCreated", function(_, _, name)
-            if name == PD.L["TT_TITLE"] then
-                DBIcon.UnregisterCallback(PD, "LibDBIcon_IconCreated")
-                SkinMinimapBtn()
-            end
-        end)
-    end
+    PD.SkinMinimapButton(_G["LibDBIcon10_PlayerDossier"])
 
     -- ── Our StaticPopups (PD_*) ─────────────────────────────────
     hooksecurefunc("StaticPopup_Show", function(which)

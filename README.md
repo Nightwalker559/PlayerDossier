@@ -31,7 +31,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 - Capped at 300 entries; the oldest are trimmed automatically. Can be turned off.
 
 ### Everything else
-- Minimap button (LibDBIcon / LibDataBroker).
+- Minimap button (no library, drag to move; picked up by button collectors).
 - Built-in **ElvUI skin** support.
 - Localization: English and German.
 

@@ -15,6 +15,9 @@
 - Chat filters use `ChatFrameUtil.AddMessageEventFilter` (the old name is a deprecated alias).
 - Ignore reason dialog uses `GetEditBox()`.
 
+### Removed
+- LibStub, CallbackHandler, LibDataBroker and LibDBIcon. The minimap button is built by the addon itself (same name, so button collectors still find it; saved position and "hidden" setting are kept).
+
 ### Internal
 - All options, hooks, menu tags and templates checked against the 12.1 Blizzard UI source.
 - Smoke test: the mock no longer provides `DeclineDuel`, new checks for popups, tooltip, secret values.
