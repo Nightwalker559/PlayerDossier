@@ -74,7 +74,7 @@ The window uses the current Retail frame style (tabs below the window, modern sc
 
 ## Changelog
 
-See [changelog.md](changelog.md).
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

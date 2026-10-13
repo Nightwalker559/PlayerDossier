@@ -1,6 +1,8 @@
 # PlayerDossier – Changelog
 
-## [1.1.4] - 2026-10-13
+---
+
+## 1.1.4
 
 ### New
 - LFG: applicants to your own group get a red "!" before their name when ignored (orange for a bad mood in the dossier).
@@ -26,7 +28,9 @@
 - All options, hooks, menu tags and templates checked against the 12.1 Blizzard UI source.
 - Smoke test: the mock no longer provides `DeclineDuel`, new checks for popups, tooltip, secret values.
 
-## [1.1.3] - 2026-10-11
+---
+
+## 1.1.3
 
 ### Changed
 - Window rebuilt on the current Retail layout (12.1): button frame without portrait, entry count under the title, tabs below the window, "Remove All" in the button bar.
@@ -37,7 +41,9 @@
 ### Internal
 - `ButtonFrameTemplate` / `DefaultPanelTemplate`, `TabSystemTemplate`, `WowScrollBoxList` + `MinimalScrollBar` with a data provider; the old row pool and `PanelTemplates_*` are gone.
 
-## [1.1.2] - 2026-10-08
+---
+
+## 1.1.2
 
 ### Fixed
 - Column headers no longer cut off ("Rolle", "Seit"); shared column widths in all list tabs, headers aligned with the rows.
@@ -49,7 +55,9 @@
 - `RunNextFrame` instead of `C_Timer.After(0)` and the tiny LFG tooltip delays.
 - ElvUI minimap button skinned via the `LibDBIcon_IconCreated` callback instead of a 1 s timer.
 
-## [1.1.1] - 2026-10-07
+---
+
+## 1.1.1
 
 ### New
 - Sortable columns in the Dossier, Ignore List and History tabs: click a header to sort, click again to reverse. The choice is saved per tab. ElvUI gets its own arrow.
@@ -66,7 +74,9 @@
 - Faster lists: row pool without scanning, backdrop set once per row, sort keys computed once.
 - Removed dead code (mood sort order, unused menu entries and locale strings).
 
-## [1.1.0] - 2026-10-06
+---
+
+## 1.1.0
 
 ### Changed
 - LFG tooltip: ignored players show their ignore reason (not the dossier note); no mood icons.
@@ -98,7 +108,9 @@
 - Chat filter and native ignore import moved into IgnoreList.lua.
 - Dead code, unused locale keys and unused textures (sort arrows) removed, ElvUI skin simplified, all comments in English.
 
-## [1.0.9] - 2026-09-20
+---
+
+## 1.0.9
 
 ### New
 - LFG: inline warning directly in the Premade Group Finder search results — group name turns red with a warning icon when the leader or a member is on the ignore list (no hover needed). Toggle: "Show inline warning in group list" (on by default)
@@ -122,7 +134,9 @@
 - Unused compat aliases `PD:ToggleIgnoreWindow()` and `PD.RefreshIgnoreWindow`.
 - Triplicated row-pooling code in UI.lua/IgnoreList.lua/GroupHistory.lua, consolidated into `PD:NewRowPool()` (Core.lua).
 
-## [1.0.8] - 2026-09-18
+---
+
+## 1.0.8
 
 ### New
 - Group History tab: auto-logs everyone you group with (class, role, mode, last seen, times grouped)
@@ -144,12 +158,16 @@
 - Version string is now read from the .toc at runtime instead of a hardcoded copy in Events.lua (prevented future version-mismatch bugs)
 - Consolidated 3 identical `DaysSince`/`TimeAgo` helper functions (UI.lua, IgnoreList.lua, GroupHistory.lua) into one shared `PD:TimeAgo()` in Core.lua
 
-## [1.0.7] - 2026-08-11
+---
+
+## 1.0.7
 
 ### Changed
 - Added Interface 120100 (Patch 12.1 – Curse of Ula'tek) support. No API changes affected this addon.
 
-## [1.0.6] - 2026-06-16
+---
+
+## 1.0.6
 
 ### Fixed
 - **Duplicate ignore/unignore menu entries** – Right-clicking a player unit showed two separate Ignore/Unignore buttons (one from the Players section, one added a second time by a redundant hook). Now shows exactly one button per menu.
@@ -163,14 +181,14 @@
 
 ---
 
-## [1.0.5] - 2026-06-13
+## 1.0.5
 
 ### Added
 - **Copy Name-Realm** – Right-clicking a player in the Players list or the Ignore List now includes a "Copy Name-Realm" option. The full `Name-Realm` string is copied to the clipboard, ready to paste into raider.io, WarcraftLogs, or any other site. A confirmation message appears in chat (respects the chat messages setting).
 
 ---
 
-## [1.0.4] - 2026-06-01
+## 1.0.4
 
 ### Fixed
 - **Chat message spam** – Reunion notices and leave prompts no longer appear multiple times when someone joins or leaves the group. WoW fires GROUP_ROSTER_UPDATE 3–5 times per roster change; all bursts are now collapsed into a single update.
@@ -181,7 +199,7 @@
 
 ---
 
-## [1.0.3] - 2026-05-29
+## 1.0.3
 
 ### Fixed
 - IL_Sync now removes WoW native ignores when the addon ignore list is empty (e.g. after "Remove All")
@@ -190,7 +208,7 @@
 
 ---
 
-## [1.0.2] - 2026-05-27
+## 1.0.2
 
 ### Fixed
 - Menu taint: wrapped all menu callbacks in securecallfunction to prevent SetRaidTarget() and other protected functions from being tainted
@@ -215,7 +233,7 @@
 
 ---
 
-## [1.0.1] - 2026-05-25
+## 1.0.1
 
 ### Fixed
 - Options tab showed "50 / 45 in WoW system" instead of "50 / 50"
@@ -253,7 +271,7 @@
 
 ---
 
-## [1.0.0] - 2026-05-23
+## 1.0.0
 
 ### Initial Release
 - Player dossier with notes and mood (Good / Neutral / Bad)
