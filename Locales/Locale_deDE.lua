@@ -138,7 +138,9 @@ L["OPT_AUTO_DECLINE_NOTE"] = "Hinweis: Funktioniert möglicherweise nicht, wenn 
 -- ── LFG ──────────────────────────────────────────────────────
 L["OPT_SEC_LFG"]         = "Gruppensuche (LFG)"
 L["OPT_LFG_INLINE"]      = "Warnung direkt in der Gruppenliste anzeigen"
-L["OPT_LFG_INLINE_SUB"]  = "Färbt den Gruppennamen rot und setzt \"!IGNORIERT\" davor, wenn der Gruppenleiter oder ein Mitglied auf der PlayerDossier-Ignorierliste steht. Spieler mit schlechter Stimmung im Dossier bekommen stattdessen ein oranges \"!WARNUNG\"."
+L["OPT_LFG_ALLOW"]       = "Gruppenfinder-Einladungen von Ignorierten erlauben"
+L["OPT_LFG_ALLOW_SUB"]   = "Das automatische Ablehnen lässt die Einladung durch, die du nach einer Anmeldung im Gruppenfinder bekommst, auch wenn der Gruppenleiter auf deiner Ignorierliste steht. Normale Einladungen werden weiterhin abgelehnt."
+L["OPT_LFG_INLINE_SUB"]  ="Färbt den Gruppennamen rot und setzt \"!IGNORIERT\" davor, wenn der Gruppenleiter oder ein Mitglied auf der PlayerDossier-Ignorierliste steht. Spieler mit schlechter Stimmung im Dossier bekommen stattdessen ein oranges \"!WARNUNG\"."
 L["LFG_IGNORED_WARNING"]  = "Ignorierter Spieler in dieser Gruppe:"
 L["LFG_INLINE_IGNORED"]   = "IGNORIERT"
 L["LFG_BAD_WARNING"]      = "Schlecht bewerteter Spieler in dieser Gruppe:"

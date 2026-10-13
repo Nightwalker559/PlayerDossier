@@ -61,7 +61,7 @@ The window uses the current Retail frame style (tabs below the window, modern sc
 | --- | --- |
 | Chat Messages | Reunion and warning messages in chat |
 | Ignore List | Block ignored players in chat · Use WoW's native ignore list · Auto-decline duels and invites · Class colors for names |
-| Group Finder | Inline warning in the group list |
+| Group Finder | Inline warning in the group list · Allow Group Finder invites from ignored players |
 | Group History | Track group history |
 | Import | Import WoW's native ignore list |
 | Minimap | Show minimap button |

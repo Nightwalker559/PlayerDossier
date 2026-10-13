@@ -254,7 +254,10 @@ local DECLINE = {
             print(string.format(L["IL_DUEL_DECLINED"], name))
         end
     end,
-    PARTY_INVITE_REQUEST = function()
+    -- Invites after a Group Finder application carry roles (Blizzard opens the
+    -- role popup for them); a manual invite has none.
+    PARTY_INVITE_REQUEST = function(_, isTank, isHealer, isDamage)
+        if (isTank or isHealer or isDamage) and PD:OPT_Get("lfgAllowInvite") then return end
         DeclineGroup()
         RunNextFrame(function()
             StaticPopup_Hide("PARTY_INVITE")
@@ -296,12 +299,12 @@ local ilEventFrame = CreateFrame("Frame", "PDIgnoreListEvents")
 for event in pairs(DECLINE) do ilEventFrame:RegisterEvent(event) end
 ilEventFrame:RegisterEvent("IGNORELIST_UPDATE")
 
-ilEventFrame:SetScript("OnEvent", function(_, event, sender)
+ilEventFrame:SetScript("OnEvent", function(_, event, sender, ...)
     local decline = DECLINE[event]
     if decline then
         if not PD:OPT_Get("autoDecline") or not sender or PD.IsSecret(sender) then return end
         local name, realm = PD.SplitName(sender)
-        if PD:IL_IsIgnored(name, realm) then decline(name) end
+        if PD:IL_IsIgnored(name, realm) then decline(name, ...) end
 
     elseif event == "IGNORELIST_UPDATE" then
         -- WoW's native list changed → re-sync the native flags

@@ -2,6 +2,9 @@
 
 ## [1.1.4] - 2026-10-13
 
+### New
+- Option "Allow Group Finder invites from ignored players": auto-decline lets the invite through after you signed up for a group, normal invites are still declined (off by default).
+
 ### Fixed
 - Auto-decline: duels from ignored players are declined again (the old call no longer exists, it errored instead).
 - Auto-decline: the duel, Group Finder invite, guild invite and trade popups close after declining.

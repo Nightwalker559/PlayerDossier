@@ -16,6 +16,7 @@ local DEFAULTS = {
     autoDecline       = true,
     classColors       = true,
     lfgInlineWarning  = true,   -- warn in the LFG result list
+    lfgAllowInvite    = false,  -- auto-decline lets Group Finder invites through
     syncNativeIgnore  = true,   -- also fill WoW's native ignore list
     trackGroupHistory = true,
 }
@@ -129,6 +130,7 @@ function PD:BuildOptionsPanel(panel)
     -- ── Group Finder (LFG) ───────────────────────────────────
     MakeSection(L["OPT_SEC_LFG"])
     MakeCB("lfgInlineWarning", L["OPT_LFG_INLINE"], L["OPT_LFG_INLINE_SUB"])
+    MakeCB("lfgAllowInvite", L["OPT_LFG_ALLOW"], L["OPT_LFG_ALLOW_SUB"])
 
     -- ── Ignore list ──────────────────────────────────────────
     MakeSection(L["OPT_SEC_IGNORE"])
