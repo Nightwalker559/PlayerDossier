@@ -3,6 +3,7 @@
 ## [1.1.4] - 2026-10-13
 
 ### New
+- LFG: applicants to your own group get a red "!" before their name when ignored (orange for a bad mood in the dossier).
 - LFG: hovering an applicant to your own group shows the ignore warning with the reason (or the dossier note).
 - Option "Allow Group Finder invites from ignored players": auto-decline lets the invite through after you signed up for a group, normal invites are still declined (off by default).
 

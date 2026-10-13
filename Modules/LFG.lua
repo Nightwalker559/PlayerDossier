@@ -100,16 +100,17 @@ local function CheckResult(resultID)
     return entry
 end
 
--- Entry for one applicant of the player's own listing. Not cached; the name
--- index is rebuilt so ignore list / dossier changes since the last search show.
-local function CheckApplicant(member)
+-- Entry for one applicant of the player's own listing. Not cached. fresh:
+-- rebuild the name index first, so ignore list / dossier changes since the
+-- last search show (only matters for names without a realm).
+local function CheckApplicant(member, fresh)
     local entry = NewEntry()
     local applicant = member:GetParent()
     local appID, idx = applicant and applicant.applicantID, member.memberIdx
     if not appID or not idx then return entry end
     local ok, name = pcall(C_LFGList.GetApplicantMemberInfo, appID, idx)
     if ok then
-        nameIndex = nil
+        if fresh then nameIndex = nil end
         CheckMember(entry, name)
     end
     return entry
@@ -187,7 +188,7 @@ end
 -- Applicant row of the player's own listing
 local function CheckAndWarnApplicant(member)
     if not member then return end
-    AddWarningLines(CheckApplicant(member), "LFG_IGNORED_APPLICANT", "LFG_BAD_APPLICANT")
+    AddWarningLines(CheckApplicant(member, true), "LFG_IGNORED_APPLICANT", "LFG_BAD_APPLICANT")
 end
 
 -- ================================================================
@@ -223,6 +224,18 @@ local function ApplyInlineWarning(frame)
     -- minus 22 with the voice chat icon) before our prefix made it longer.
     local maxW = (frame.isApplication and 165 or 176) - (frame.VoiceChat and frame.VoiceChat:IsShown() and 22 or 0)
     if frame.Name:GetWidth() > maxW then frame.Name:SetWidth(maxW) end
+end
+
+-- Applicant row: red "!" (ignored) or orange "!" (bad mood in the dossier) in
+-- front of the name. Blizzard re-sets Name on every UpdateApplicantMember and
+-- our post-hook runs afterwards, so the mark never doubles up.
+local function MarkApplicant(member)
+    if not member.Name or not PD:OPT_Get("lfgInlineWarning") then return end
+    local entry = CheckApplicant(member)
+    if not entry.hasIgnored and not entry.hasBad then return end
+    local text = member.Name:GetText()
+    if not text or text == "" or PD.IsSecret(text) then return end
+    member.Name:SetText((entry.hasIgnored and "|cffff2e2e!|r" or "|cffff8800!|r") .. text)
 end
 
 lfgFrame:SetScript("OnEvent", function()
@@ -274,6 +287,7 @@ end
 -- of the player's own listing). While hovered, Update re-runs OnEnter too.
 local function OnApplicantUpdate(member)
     HookEnter(member, CheckAndWarnApplicant)
+    MarkApplicant(member)
     if GameTooltip:GetOwner() == member then ScheduleTooltip(member, CheckAndWarnApplicant) end
 end
 
