@@ -2,18 +2,14 @@
 
 ---
 
-## 1.1.6
+## 1.1.5
 
 ### New
 - Options: "Mood icons" dropdown with three sets: Faces, a new subtle set and Cats.
 - History: every player gets a mood icon, neutral by default, the Dossier mood for Dossier players and the bad mood for ignored players.
 
----
-
-## 1.1.5
-
 ### Changed
-- New addon icon, CurseForge images and mood icons (Good, Neutral, Bad).
+- New addon icon and new mood icons (Good, Neutral, Bad).
 
 ---
 
