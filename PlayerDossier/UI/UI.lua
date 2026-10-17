@@ -412,7 +412,7 @@ local COL_REALM = PD.COL.REALM
 local COL_ROLE  = PD.COL.ROLE
 local COL_SINCE = PD.COL.SINCE
 local COL_NOTE  = PD.COL.LAST
-local ROW_H     = 52   -- fits the 48px mood icon
+local ROW_H     = 52
 local ROW_PAD   = 2
 
 local Lower = PD.Lower

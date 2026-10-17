@@ -18,8 +18,8 @@ local L  = PD.L
 -- columns are at least ~60px wide.
 -- ----------------------------------------------------------------
 PD.COL = {
-    MOOD  = 4,    -- mood icon (Dossier and Ignore List tabs, no header)
-    NAME  = 58,   -- leaves room for the 48px mood icon
+    MOOD  = 4,    -- mood icon (all list tabs, no header)
+    NAME  = 58,   -- leaves room for the mood icon
     REALM = 170,
     ROLE  = 275,
     MODE  = 335,  -- History only (only ever "M+<level>" - ScanGroup() filters on ^M%+)
@@ -331,12 +331,13 @@ function PD:LookupClass(name, realm)
 end
 
 -- Mood icon at the left edge of a row (created once per pooled row)
-function PD:SetRowMood(row, mood, size)
+PD.MOOD_ICON_SIZE = 36
+function PD:SetRowMood(row, mood)
     if not row.moodTex then
         row.moodTex = row:CreateTexture(nil, "ARTWORK")
         row.moodTex:SetPoint("LEFT", row, "LEFT", PD.COL.MOOD, 0)
     end
-    row.moodTex:SetSize(size, size)
+    row.moodTex:SetSize(PD.MOOD_ICON_SIZE, PD.MOOD_ICON_SIZE)
     row.moodTex:SetTexture(PD:GetMood(mood).tex)
 end
 
@@ -346,7 +347,7 @@ end
 function PD:FillPlayerCols(row, e, o)
     local COL = PD.COL
 
-    PD:SetRowMood(row, o.mood, 48)
+    PD:SetRowMood(row, o.mood)
 
     local nameLabel = PD:RowLabel(row, "nameLabel", COL.NAME, COL.REALM, "GameFontNormalLarge")
     PD:ApplyNameColor(nameLabel, o.class)
