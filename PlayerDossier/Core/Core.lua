@@ -133,11 +133,12 @@ PD.MOOD = {
     neutral  = { r = 1, g = 0.85, b = 0,    hex = "ffdd00", labelKey = "MOOD_NEUTRAL", file = "mood_neutral" },
     negative = { r = 1, g = 0.18, b = 0.18, hex = "ff2e2e", labelKey = "MOOD_BAD",     file = "mood_bad"     },
 }
--- Icon sets: "faces" (default) and "minimal" (file name suffix "_minimal")
-PD.MOOD_STYLES = { "faces", "minimal" }
+-- Icon sets: "faces" (default, no suffix), "minimal" and "cats" (file name suffix)
+PD.MOOD_STYLES = { "faces", "minimal", "cats" }
+local STYLE_SUFFIX = { minimal = "_minimal", cats = "_cat" }
 
 function PD:MoodTexture(id, style)
-    return MEDIA .. PD.MOOD[id].file .. (style == "minimal" and "_minimal" or "") .. ".png"
+    return MEDIA .. PD.MOOD[id].file .. (STYLE_SUFFIX[style] or "") .. ".png"
 end
 
 function PD:ApplyMoodStyle(style)

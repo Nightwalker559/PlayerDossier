@@ -5,7 +5,7 @@
 ## 1.1.6
 
 ### New
-- Options: "Mood icons" dropdown, choose between the Faces and a new, more subtle icon set.
+- Options: "Mood icons" dropdown with three sets: Faces, a new subtle set and Cats.
 
 ---
 

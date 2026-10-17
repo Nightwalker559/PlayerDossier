@@ -122,6 +122,7 @@ L["OPT_SEC_APPEARANCE"]       = "Appearance"
 L["OPT_MOOD_STYLE"]           = "Mood icons"
 L["OPT_MOOD_STYLE_FACES"]     = "Faces"
 L["OPT_MOOD_STYLE_MINIMAL"]   = "Subtle"
+L["OPT_MOOD_STYLE_CATS"]      = "Cats"
 
 -- ── Cleanup ───────────────────────────────────────────
 L["BTN_CLEAR_ALL"]            = "Remove All"
