@@ -195,7 +195,14 @@ local SORT_GETTERS = {
     count = function(e) return e.count or 1 end,
 }
 
+local HISTORY_MOOD_SIZE = ROW_H - 4
+
 local function FillHistoryRow(row, e)
+    -- Everyone is neutral; players in the Ignore List or the Dossier show their mood
+    local dEntry = PD:GetEntry(e.name, e.realm)
+    local mood = PD:IL_IsIgnored(e.name, e.realm) and "negative" or dEntry and dEntry.mood or "neutral"
+    PD:SetRowMood(row, mood, HISTORY_MOOD_SIZE)
+
     local nameLabel = PD:RowLabel(row, "nameLabel", COL_NAME, COL_REALM)
     PD:ApplyNameColor(nameLabel, e.class)
     nameLabel:SetText(e.name or "?")

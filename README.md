@@ -27,6 +27,7 @@ PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combi
 
 ### Group History
 - Automatically logs everyone you group with in **Mythic+** (class, role, M+ level, last seen, how often you grouped).
+- Every entry shows a mood icon: neutral by default, your mood for players in the Dossier, the bad mood for ignored players.
 - Right-click an entry to add that player to your Dossier or Ignore List after the fact.
 - Capped at 300 entries; the oldest are trimmed automatically. Can be turned off.
 

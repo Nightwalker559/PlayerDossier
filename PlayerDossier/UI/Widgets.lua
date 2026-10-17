@@ -330,18 +330,23 @@ function PD:LookupClass(name, realm)
     if h and h.class and h.class ~= "UNKNOWN" then return h.class end
 end
 
+-- Mood icon at the left edge of a row (created once per pooled row)
+function PD:SetRowMood(row, mood, size)
+    if not row.moodTex then
+        row.moodTex = row:CreateTexture(nil, "ARTWORK")
+        row.moodTex:SetPoint("LEFT", row, "LEFT", PD.COL.MOOD, 0)
+    end
+    row.moodTex:SetSize(size, size)
+    row.moodTex:SetTexture(PD:GetMood(mood).tex)
+end
+
 -- Columns shared by the Dossier and Ignore List rows: mood icon,
 -- class-colored name, realm, role (from the group history), since, note.
 -- e: entry (name, realm); o: { mood, class, ts, note }
 function PD:FillPlayerCols(row, e, o)
     local COL = PD.COL
 
-    if not row.moodTex then
-        row.moodTex = row:CreateTexture(nil, "ARTWORK")
-        row.moodTex:SetSize(48, 48)
-        row.moodTex:SetPoint("LEFT", row, "LEFT", COL.MOOD, 0)
-    end
-    row.moodTex:SetTexture(PD:GetMood(o.mood).tex)
+    PD:SetRowMood(row, o.mood, 48)
 
     local nameLabel = PD:RowLabel(row, "nameLabel", COL.NAME, COL.REALM, "GameFontNormalLarge")
     PD:ApplyNameColor(nameLabel, o.class)

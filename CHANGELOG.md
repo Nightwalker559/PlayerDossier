@@ -6,6 +6,7 @@
 
 ### New
 - Options: "Mood icons" dropdown with three sets: Faces, a new subtle set and Cats.
+- History: every player gets a mood icon, neutral by default, the Dossier mood for Dossier players and the bad mood for ignored players.
 
 ---
 
