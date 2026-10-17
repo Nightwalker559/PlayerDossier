@@ -2,6 +2,13 @@
 
 ---
 
+## 1.1.5
+
+### Changed
+- New addon icon, CurseForge images and mood icons (Good, Neutral, Bad).
+
+---
+
 ## 1.1.4
 
 ### New
