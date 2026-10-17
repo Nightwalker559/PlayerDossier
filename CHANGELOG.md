@@ -2,6 +2,13 @@
 
 ---
 
+## 1.1.6
+
+### New
+- Options: "Mood icons" dropdown, choose between the Faces and a new, more subtle icon set.
+
+---
+
 ## 1.1.5
 
 ### Changed

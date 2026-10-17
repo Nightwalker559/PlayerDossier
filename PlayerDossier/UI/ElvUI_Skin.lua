@@ -74,6 +74,9 @@ local function SkinTabContent(n)
     SkinTrimScrollBar(panel.scrollBar)
     SkinButton(panel.clearBtn)     -- list tabs
     SkinButton(panel.importBtn)    -- options tab
+    if panel.moodDropdown then
+        SkinOnce(panel.moodDropdown, function(dd) S:HandleDropDownBox(dd, 200) end)
+    end
 
     if panel._optCbs then
         for _, cb in pairs(panel._optCbs) do

@@ -118,6 +118,11 @@ L["SLASH_HELP_ADD"]     = "  Right-click any player or chat name to add them to 
 L["OPT_CLASS_COLORS"]     = "Show player names in class colors"
 L["OPT_CLASS_COLORS_SUB"] = "Colors player names by their class. Disable for white names."
 
+L["OPT_SEC_APPEARANCE"]       = "Appearance"
+L["OPT_MOOD_STYLE"]           = "Mood icons"
+L["OPT_MOOD_STYLE_FACES"]     = "Faces"
+L["OPT_MOOD_STYLE_MINIMAL"]   = "Subtle"
+
 -- ── Cleanup ───────────────────────────────────────────
 L["BTN_CLEAR_ALL"]            = "Remove All"
 

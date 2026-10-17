@@ -59,6 +59,7 @@ The window uses the current Retail frame style (tabs below the window, modern sc
 
 | Section | Setting |
 | --- | --- |
+| Appearance | Mood icons: Faces or Subtle |
 | Chat Messages | Reunion and warning messages in chat |
 | Ignore List | Block ignored players in chat · Use WoW's native ignore list · Auto-decline duels and invites · Class colors for names |
 | Group Finder | Inline warning in the group list |

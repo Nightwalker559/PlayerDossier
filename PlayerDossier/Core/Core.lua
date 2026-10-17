@@ -133,9 +133,19 @@ PD.MOOD = {
     neutral  = { r = 1, g = 0.85, b = 0,    hex = "ffdd00", labelKey = "MOOD_NEUTRAL", file = "mood_neutral" },
     negative = { r = 1, g = 0.18, b = 0.18, hex = "ff2e2e", labelKey = "MOOD_BAD",     file = "mood_bad"     },
 }
-for _, m in pairs(PD.MOOD) do
-    m.tex = MEDIA .. m.file .. ".png"
+-- Icon sets: "faces" (default) and "minimal" (file name suffix "_minimal")
+PD.MOOD_STYLES = { "faces", "minimal" }
+
+function PD:MoodTexture(id, style)
+    return MEDIA .. PD.MOOD[id].file .. (style == "minimal" and "_minimal" or "") .. ".png"
 end
+
+function PD:ApplyMoodStyle(style)
+    for id, m in pairs(PD.MOOD) do
+        m.tex = PD:MoodTexture(id, style)
+    end
+end
+PD:ApplyMoodStyle("faces")
 
 -- Unknown / missing moods count as neutral
 function PD:GetMood(id)

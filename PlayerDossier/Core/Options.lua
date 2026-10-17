@@ -18,6 +18,7 @@ local DEFAULTS = {
     lfgInlineWarning  = true,   -- warn in the LFG result list
     syncNativeIgnore  = true,   -- also fill WoW's native ignore list
     trackGroupHistory = true,
+    moodStyle         = "faces",   -- "faces" | "minimal"
 }
 
 PD:OnInit(function()
@@ -25,6 +26,7 @@ PD:OnInit(function()
     for key, default in pairs(DEFAULTS) do
         if opt[key] == nil then opt[key] = default end
     end
+    PD:ApplyMoodStyle(opt.moodStyle)
     opt.lfgHideIgnored = nil   -- option was removed in 1.1.0
     opt.lfgAllowInvite = nil   -- dev-only option, dropped before the 1.1.4 release
 end)
@@ -122,6 +124,35 @@ function PD:BuildOptionsPanel(panel)
         yOff = yOff - rowHeight
         return cb, rowHeight
     end
+
+    -- ── Appearance ───────────────────────────────────────────
+    MakeSection(L["OPT_SEC_APPEARANCE"])
+    local moodLabel = p:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    moodLabel:SetPoint("TOPLEFT", p, "TOPLEFT", INDENT + 4, yOff - 5)
+    moodLabel:SetText(L["OPT_MOOD_STYLE"])
+    local dd = CreateFrame("DropdownButton", nil, p, "WowStyle1DropdownTemplate")
+    panel.moodDropdown = dd   -- ElvUI skin
+    dd:SetWidth(200)
+    dd:SetPoint("TOPLEFT", p, "TOPLEFT", 240, yOff)
+    local function MoodStyleText(style)
+        local t = {}
+        for _, id in ipairs({ "positive", "neutral", "negative" }) do
+            t[#t + 1] = string.format("|T%s:16:16|t", PD:MoodTexture(id, style))
+        end
+        return table.concat(t, " ") .. "  " .. L["OPT_MOOD_STYLE_" .. style:upper()]
+    end
+    dd:SetupMenu(function(_, root)
+        for _, style in ipairs(PD.MOOD_STYLES) do
+            root:CreateRadio(MoodStyleText(style),
+                function() return PlayerDossierDB.opt.moodStyle == style end,
+                function()
+                    PD:OPT_Set("moodStyle", style)
+                    PD:ApplyMoodStyle(style)
+                    PD:RefreshActiveTab()
+                end)
+        end
+    end)
+    yOff = yOff - 40
 
     -- ── Group history ────────────────────────────────────────
     MakeSection(L["OPT_SEC_HISTORY"])
