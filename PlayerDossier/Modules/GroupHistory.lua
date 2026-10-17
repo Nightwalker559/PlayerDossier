@@ -181,8 +181,8 @@ local COL_ROLE  = PD.COL.ROLE
 local COL_MODE  = PD.COL.MODE
 local COL_SEEN  = PD.COL.SINCE
 local COL_COUNT = PD.COL.LAST
-local ROW_H     = 40
-local ROW_PAD   = 2
+local ROW_H     = PD.LIST_ROW_H
+local ROW_PAD   = PD.LIST_ROW_PAD
 
 local Lower = PD.Lower
 

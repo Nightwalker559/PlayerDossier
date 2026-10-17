@@ -10,6 +10,7 @@
 
 ### Changed
 - New addon icon and new mood icons (Good, Neutral, Bad).
+- Dossier, Ignore List and History look the same: row height, name font and mood icon size.
 
 ---
 

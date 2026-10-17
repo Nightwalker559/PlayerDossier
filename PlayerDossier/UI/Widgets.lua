@@ -330,8 +330,12 @@ function PD:LookupClass(name, realm)
     if h and h.class and h.class ~= "UNKNOWN" then return h.class end
 end
 
+-- Row height and spacing of all three list tabs (same look everywhere)
+PD.LIST_ROW_H   = 40
+PD.LIST_ROW_PAD = 2
+
 -- Mood icon at the left edge of a row (created once per pooled row)
-PD.MOOD_ICON_SIZE = 36
+PD.MOOD_ICON_SIZE = PD.LIST_ROW_H - 4
 function PD:SetRowMood(row, mood)
     if not row.moodTex then
         row.moodTex = row:CreateTexture(nil, "ARTWORK")
@@ -349,7 +353,7 @@ function PD:FillPlayerCols(row, e, o)
 
     PD:SetRowMood(row, o.mood)
 
-    local nameLabel = PD:RowLabel(row, "nameLabel", COL.NAME, COL.REALM, "GameFontNormalLarge")
+    local nameLabel = PD:RowLabel(row, "nameLabel", COL.NAME, COL.REALM)
     PD:ApplyNameColor(nameLabel, o.class)
     nameLabel:SetText(e.name or "?")
 

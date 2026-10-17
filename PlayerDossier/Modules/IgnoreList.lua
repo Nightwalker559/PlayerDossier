@@ -389,8 +389,8 @@ local COL_REALM  = PD.COL.REALM
 local COL_ROLE   = PD.COL.ROLE
 local COL_LISTED = PD.COL.SINCE
 local COL_NOTE   = PD.COL.LAST
-local ROW_H      = 52
-local ROW_PAD    = 2
+local ROW_H      = PD.LIST_ROW_H
+local ROW_PAD    = PD.LIST_ROW_PAD
 
 local Lower = PD.Lower
 
