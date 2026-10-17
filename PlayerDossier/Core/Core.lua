@@ -105,6 +105,13 @@ end
 -- Misc helpers
 -- ----------------------------------------------------------------
 
+-- Values of a table as an array (for sorting)
+function PD.ValuesList(t)
+    local list = {}
+    for _, v in pairs(t) do list[#list + 1] = v end
+    return list
+end
+
 function PD.TableCount(t)
     local n = 0
     for _ in pairs(t) do n = n + 1 end

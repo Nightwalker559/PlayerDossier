@@ -412,18 +412,8 @@ local COL_REALM = PD.COL.REALM
 local COL_ROLE  = PD.COL.ROLE
 local COL_SINCE = PD.COL.SINCE
 local COL_NOTE  = PD.COL.LAST
-local ROW_H     = PD.LIST_ROW_H
-local ROW_PAD   = PD.LIST_ROW_PAD
 
-local Lower = PD.Lower
-
-local SORT_GETTERS = {
-    name  = function(e) return Lower(e.name) end,
-    realm = function(e) return Lower(e.realm) end,
-    role  = PD.RoleSortKey,
-    since = function(e) return e.timestamp or 0 end,
-    note  = function(e) return Lower(e.note) end,
-}
+local SORT_GETTERS = PD.PlayerSortGetters("note")
 
 local function FillPlayerRow(row, e)
     PD:FillPlayerCols(row, e, {
@@ -469,8 +459,6 @@ function PD:BuildPlayersPanel(panel)
             default  = PD.SORT_DEFAULT,
             onChange = function() PD:RefreshMainWindow() end,
         },
-        rowH       = ROW_H,
-        pad        = ROW_PAD,
         tint       = PD.ROW_TINT.default,
         fill       = FillPlayerRow,
         clearPopup = "PD_CONFIRM_CLEAR_PLAYERS",

@@ -36,12 +36,6 @@ local function SkinButton(btn)
     if btn then SkinOnce(btn, function() S:HandleButton(btn) end) end
 end
 
--- Portrait-style frame (main window and dialogs: ElvUI strips the Blizzard
--- art, skins the inset and the close button and applies its template)
-local function SkinPanelFrame(frame)
-    S:HandlePortraitFrame(frame)
-end
-
 -- ----------------------------------------------------------------
 -- Tabs (TabSystem below the main window).
 --
@@ -109,7 +103,7 @@ local function LoadSkin()
     if f then
         f:HookScript("OnShow", function(self)
             SkinOnce(self, function()
-                SkinPanelFrame(self)
+                S:HandlePortraitFrame(self)
                 SkinTabSystem(self.TabSystem, self)
             end)
         end)
@@ -120,7 +114,7 @@ local function LoadSkin()
     if nd then
         nd:HookScript("OnShow", function(self)
             SkinOnce(self, function()
-                SkinPanelFrame(self)
+                S:HandlePortraitFrame(self)
 
                 local eb = _G["PDNoteEditBox"]
                 if eb then S:HandleEditBox(eb) end
@@ -140,7 +134,7 @@ local function LoadSkin()
     hooksecurefunc(PD, "ShowCopyPopup", function()
         SkinOnce(_G["PDCopyPopup"], function(cp)
             pcall(function()
-                SkinPanelFrame(cp)
+                S:HandlePortraitFrame(cp)
                 if cp.editBox then S:HandleEditBox(cp.editBox) end
             end)
         end)

@@ -51,9 +51,6 @@ local function GetNameCache()
     return nameCache
 end
 
--- Ignored players are hidden in the Dossier tab, so either tab may change
-local function RefreshPanelIfShown() PD:RefreshActiveTab() end
-
 function PD:IL_Add(name, realm, reason)
     realm = PD.NormRealm(realm)
     local key = PD:GetKey(name, realm)
@@ -79,7 +76,7 @@ function PD:IL_Add(name, realm, reason)
         slotWarningShown = true
         if PD:OPT_Get("chatMessages") then print(L["IL_SLOTS_FULL"]) end
     end
-    RefreshPanelIfShown()
+    PD:RefreshActiveTab()
 end
 
 -- Edits the reason of an already ignored player (timestamp/native untouched)
@@ -87,7 +84,7 @@ function PD:IL_SetReason(name, realm, reason)
     local entry = PlayerDossierDB.ignoreList[PD:GetKey(name, realm)]
     if not entry then return end
     entry.reason = reason or ""
-    RefreshPanelIfShown()
+    PD:RefreshActiveTab()
 end
 
 function PD:IL_Remove(name, realm)
@@ -105,7 +102,7 @@ function PD:IL_Remove(name, realm)
     if PD:OPT_Get("chatMessages") then
         print(string.format(L["IL_UNIGNORED_MSG"], name))
     end
-    RefreshPanelIfShown()
+    PD:RefreshActiveTab()
 end
 
 -- Adds every player of WoW's native ignore list to the addon list.
@@ -129,7 +126,7 @@ function PD:IL_ImportNative()
         end
     end
     if added > 0 then PD:IL_Sync() end
-    RefreshPanelIfShown()
+    PD:RefreshActiveTab()
     return added, skipped
 end
 
@@ -306,7 +303,7 @@ ilEventFrame:SetScript("OnEvent", function(_, event, sender)
     elseif event == "IGNORELIST_UPDATE" then
         -- WoW's native list changed → re-sync the native flags
         PD:IL_Sync()
-        RefreshPanelIfShown()
+        PD:RefreshActiveTab()
 
         -- One warning per burst of updates, after unit names have resolved
         if not groupWarnPending then
@@ -389,18 +386,8 @@ local COL_REALM  = PD.COL.REALM
 local COL_ROLE   = PD.COL.ROLE
 local COL_LISTED = PD.COL.SINCE
 local COL_NOTE   = PD.COL.LAST
-local ROW_H      = PD.LIST_ROW_H
-local ROW_PAD    = PD.LIST_ROW_PAD
 
-local Lower = PD.Lower
-
-local SORT_GETTERS = {
-    name  = function(e) return Lower(e.name) end,
-    realm = function(e) return Lower(e.realm) end,
-    role  = PD.RoleSortKey,
-    since = function(e) return e.timestamp or 0 end,
-    note  = function(e) return Lower(e.reason) end,
-}
+local SORT_GETTERS = PD.PlayerSortGetters("reason")
 
 local function FillIgnoreRow(row, entry)
     -- Same columns as the Dossier tab; ignored players always get the bad mood icon
@@ -441,8 +428,6 @@ function PD:BuildIgnorePanel(panel)
             default  = PD.SORT_DEFAULT,
             onChange = function() PD:RefreshIgnorePanel() end,
         },
-        rowH       = ROW_H,
-        pad        = ROW_PAD,
         tint       = PD.ROW_TINT.ignore,
         fill       = FillIgnoreRow,
         clearPopup = "PD_CONFIRM_CLEAR_IGNORE",
@@ -452,11 +437,9 @@ end
 function PD:RefreshIgnorePanel()
     local panel = PD.panel2
     if not panel or not panel.scrollBox then return end
-    local list = {}
-    for _, entry in pairs(PD:IL_GetAll()) do list[#list + 1] = entry end
     PD:RenderList({
         panel    = panel,
-        list     = list,
+        list     = PD.ValuesList(PD:IL_GetAll()),
         sortId   = "ignore",
         getters  = SORT_GETTERS,
         subtitle = { "SUB_NO_IGNORED", "SUB_1_IGNORED", "SUB_N_IGNORED" },

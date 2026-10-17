@@ -47,6 +47,13 @@ end
 
 local INDENT = 8
 
+-- Locale key per mood icon set (PD.MOOD_STYLES)
+local MOOD_STYLE_LABELS = {
+    faces   = "OPT_MOOD_STYLE_FACES",
+    minimal = "OPT_MOOD_STYLE_MINIMAL",
+    cats    = "OPT_MOOD_STYLE_CATS",
+}
+
 function PD:BuildOptionsPanel(panel)
     -- Scroll box (static content) so everything fits
     local box = CreateFrame("Frame", nil, panel, "WowScrollBox")
@@ -139,7 +146,7 @@ function PD:BuildOptionsPanel(panel)
         for _, id in ipairs({ "positive", "neutral", "negative" }) do
             t[#t + 1] = string.format("|T%s:16:16|t", PD:MoodTexture(id, style))
         end
-        return table.concat(t, " ") .. "  " .. L["OPT_MOOD_STYLE_" .. style:upper()]
+        return table.concat(t, " ") .. "  " .. L[MOOD_STYLE_LABELS[style]]
     end
     dd:SetupMenu(function(_, root)
         for _, style in ipairs(PD.MOOD_STYLES) do

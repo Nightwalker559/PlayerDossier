@@ -2,7 +2,8 @@
 --  PlayerDossier – GroupHistory.lua
 --  Logs everyone you group with in Mythic+ (name, realm, class,
 --  role, key level) so you can retroactively add them to the
---  Dossier or Ignore List after the group has disbanded.
+--  Dossier or Ignore List after the group has disbanded. The tab
+--  shows each player's mood (neutral, Dossier mood, or bad if ignored).
 --
 --  DB: PlayerDossierDB.history = {
 --    ["Name-Realm"] = { name, realm, class, role, guid, context,
@@ -86,46 +87,20 @@ end
 
 local seenThisGroup = {}
 
--- Content label of the current group ("M+<level>", "Delve", ...), or nil
--- if unknown/not in an instance. pcall'd since not every API exists on
--- every client build.
-local function GetContentLabel()
-    local ok, result = pcall(function()
-        if PD:IsMythicPlusActive() then
-            local level = C_ChallengeMode.GetActiveKeystoneInfo and C_ChallengeMode.GetActiveKeystoneInfo()
-            return level and ("M+" .. level) or "M+"
-        end
-
-        if C_PartyInfo and C_PartyInfo.IsDelveInProgress and C_PartyInfo.IsDelveInProgress() then
-            return L["HIST_CTX_DELVE"]
-        end
-
-        if not IsInInstance() then return nil end
-
-        local _, iType, difficultyID, difficultyName = GetInstanceInfo()
-        if difficultyID == 24 or difficultyID == 33 then
-            return L["HIST_CTX_TIMEWALKING"]
-        elseif iType == "raid" then
-            return difficultyName or L["HIST_CTX_RAID"]
-        elseif iType == "party" then
-            return difficultyName or L["HIST_CTX_DUNGEON"]
-        elseif iType == "pvp" or iType == "arena" then
-            return difficultyName or L["HIST_CTX_PVP"]
-        elseif iType == "scenario" then
-            return L["HIST_CTX_SCENARIO"]
-        end
-        return difficultyName
-    end)
-    return ok and result or nil
+-- "M+<level>" while a Mythic+ run is active, else nil. pcall'd since the
+-- keystone level can be unavailable (nil/secret) right at the start.
+local function GetMythicPlusLabel()
+    if not PD:IsMythicPlusActive() then return nil end
+    local ok, label = pcall(function() return "M+" .. C_ChallengeMode.GetActiveKeystoneInfo() end)
+    return ok and label or "M+"
 end
 
 local function ScanGroup()
     if not PD:OPT_Get("trackGroupHistory") then return end
-    local context = GetContentLabel()
-
     -- Only Mythic+ groups are worth tracking - raids, heroics, timewalking,
     -- delves, scenarios, PvP and groups outside instances are skipped.
-    if not context or not context:find("^M%+") then return end
+    local context = GetMythicPlusLabel()
+    if not context then return end
 
     PD:ForEachGroupMember(function(unit, name, realm)
         local key      = PD:GetKey(name, realm)
@@ -181,16 +156,12 @@ local COL_ROLE  = PD.COL.ROLE
 local COL_MODE  = PD.COL.MODE
 local COL_SEEN  = PD.COL.SINCE
 local COL_COUNT = PD.COL.LAST
-local ROW_H     = PD.LIST_ROW_H
-local ROW_PAD   = PD.LIST_ROW_PAD
-
-local Lower = PD.Lower
 
 local SORT_GETTERS = {
-    name  = function(e) return Lower(e.name) end,
-    realm = function(e) return Lower(e.realm) end,
-    role  = function(e) return Lower(e.role) end,
-    mode  = function(e) return Lower(e.context) end,
+    name  = function(e) return PD.Lower(e.name) end,
+    realm = function(e) return PD.Lower(e.realm) end,
+    role  = function(e) return PD.Lower(e.role) end,
+    mode  = function(e) return PD.Lower(e.context) end,
     since = function(e) return e.lastSeen or 0 end,
     count = function(e) return e.count or 1 end,
 }
@@ -199,20 +170,13 @@ local function FillHistoryRow(row, e)
     -- Everyone is neutral; players in the Ignore List or the Dossier show their mood
     local dEntry = PD:GetEntry(e.name, e.realm)
     local mood = PD:IL_IsIgnored(e.name, e.realm) and "negative" or dEntry and dEntry.mood or "neutral"
-    PD:SetRowMood(row, mood)
+    PD:FillIdentityCols(row, e, e.class, mood, e.role)
 
-    local nameLabel = PD:RowLabel(row, "nameLabel", COL_NAME, COL_REALM)
-    PD:ApplyNameColor(nameLabel, e.class)
-    nameLabel:SetText(e.name or "?")
-
-    PD:RowLabel(row, "realmLabel", COL_REALM, COL_ROLE, nil, 0.78, 0.78, 0.78)
-        :SetText(e.realm or PD.GetMyRealm())
-    PD:RowLabel(row, "roleLabel", COL_ROLE, COL_MODE):SetText(PD:GH_RoleText(e.role))
-    PD:RowLabel(row, "modeLabel", COL_MODE, COL_SEEN, nil, 0.6, 0.85, 1)
+    PD:RowLabel(row, "modeLabel", COL_MODE, COL_SEEN, 0.6, 0.85, 1)
         :SetText(e.context or "|cff444444-|r")
-    PD:RowLabel(row, "seenLabel", COL_SEEN, COL_COUNT, nil, 0.78, 0.78, 0.78)
+    PD:RowLabel(row, "seenLabel", COL_SEEN, COL_COUNT, 0.78, 0.78, 0.78)
         :SetText(PD:TimeAgo(e.lastSeen))
-    PD:RowLabel(row, "countLabel", COL_COUNT, nil, nil, 0.78, 0.78, 0.78)
+    PD:RowLabel(row, "countLabel", COL_COUNT, nil, 0.78, 0.78, 0.78)
         :SetText(tostring(e.count or 1))
 
     local eName, eRealm, eClass, eGuid = e.name, e.realm, e.class, e.guid
@@ -257,8 +221,6 @@ function PD:BuildHistoryPanel(panel)
             default  = PD.SORT_DEFAULT,
             onChange = function() PD:RefreshHistoryPanel() end,
         },
-        rowH       = ROW_H,
-        pad        = ROW_PAD,
         tint       = PD.ROW_TINT.default,
         fill       = FillHistoryRow,
         clearPopup = "PD_CONFIRM_CLEAR_HISTORY",
@@ -268,11 +230,9 @@ end
 function PD:RefreshHistoryPanel()
     local panel = PD.panel3
     if not panel or not panel.scrollBox then return end
-    local list = {}
-    for _, e in pairs(PD:GH_GetAll()) do list[#list + 1] = e end
     PD:RenderList({
         panel    = panel,
-        list     = list,
+        list     = PD.ValuesList(PD:GH_GetAll()),
         sortId   = "history",
         getters  = SORT_GETTERS,
         subtitle = { "SUB_NO_HISTORY", "SUB_1_HISTORY", "SUB_N_HISTORY" },

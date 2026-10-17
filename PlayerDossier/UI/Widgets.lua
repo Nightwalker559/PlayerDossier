@@ -27,6 +27,11 @@ PD.COL = {
     LAST  = 465,
 }
 
+-- Row height and spacing of all three list tabs (same look everywhere)
+PD.LIST_ROW_H   = 40
+PD.LIST_ROW_PAD = 2
+local MOOD_ICON_SIZE = PD.LIST_ROW_H - 4
+
 -- Header cells start where the row labels start: scroll box inset (4)
 -- + row inset (2) = 6px from the panel's left edge
 local HEADER_X = 6
@@ -75,15 +80,7 @@ function PD:CreateDialogFrame(name, width, height, strata)
 end
 
 -- ----------------------------------------------------------------
--- Shared table header for the Dossier/Ignore List/History tabs.
--- Each header stretches to the next column (the last one to the
--- panel's right edge) so long labels aren't cut off.
---
--- heads: { { text=<string>, x=<pixel offset from left>,
---            key=<sort key>, descFirst=<true: first click sorts descending> }, ... }
---        sorted by x ascending. Heads with a key are clickable.
--- sort:  { id=<saved sort state name>, default={key=,asc=}, onChange=fn }
--- rightPad: distance to the panel's right edge (default LIST_BAR_W = scroll bar)
+-- Sorting
 -- ----------------------------------------------------------------
 
 -- Default for every list tab: "Since", newest first
@@ -97,6 +94,18 @@ function PD.Lower(s) return (s or ""):lower() end
 function PD.RoleSortKey(e)
     local h = PD:GH_GetEntry(e.name, e.realm)
     return PD.Lower(h and h.role)
+end
+
+-- Sort getters shared by the Dossier and Ignore List tabs (they differ only in
+-- the field behind the Note column: "note" or "reason")
+function PD.PlayerSortGetters(noteField)
+    return {
+        name  = function(e) return PD.Lower(e.name) end,
+        realm = function(e) return PD.Lower(e.realm) end,
+        role  = PD.RoleSortKey,
+        since = function(e) return e.timestamp or 0 end,
+        note  = function(e) return PD.Lower(e[noteField]) end,
+    }
 end
 
 -- Saved sort state of a list tab (falls back to the tab's default)
@@ -148,6 +157,15 @@ function PD:RestyleSortArrows()
     for _, arrow in ipairs(sortArrows) do PD.StyleSortArrow(arrow, arrow.asc) end
 end
 
+-- Shared table header for the Dossier/Ignore List/History tabs.
+-- Each header stretches to the next column (the last one to the
+-- panel's right edge) so long labels aren't cut off.
+--
+-- heads: { { text=<string>, x=<pixel offset from left>,
+--            key=<sort key>, descFirst=<true: first click sorts descending> }, ... }
+--        sorted by x ascending. Heads with a key are clickable.
+-- sort:  { id=<saved sort state name>, default={key=,asc=}, onChange=fn }
+-- rightPad: distance to the panel's right edge (default LIST_BAR_W = scroll bar)
 function PD:BuildColumnHeaders(panel, heads, rightPad, sort)
     rightPad = rightPad or LIST_BAR_W
     local buttons = {}
@@ -224,9 +242,10 @@ end
 -- of the main window. Rows are pooled by the ScrollBox and filled from
 -- a DataProvider (see RenderList).
 --
--- spec = { heads, sort, rowH, pad, tint, fill, clearPopup }
+-- Row height and spacing are the same for all tabs (PD.LIST_ROW_H / _PAD).
+-- spec = { heads, sort, tint, fill, clearPopup }
 --   sort: see BuildColumnHeaders.
---   rowH/pad: row height and spacing; tint: one of PD.ROW_TINT.
+--   tint: one of PD.ROW_TINT.
 --   fill(row, entry): fills a (recycled) row.
 --   clearPopup: StaticPopup shown by the "Remove All" button.
 -- Sets panel.scrollBox, panel.scrollBar, panel.clearBtn (the ElvUI
@@ -243,9 +262,9 @@ function PD:BuildListPanel(panel, spec)
     bar:SetPoint("TOPLEFT",    box, "TOPRIGHT",    5, -3)
     bar:SetPoint("BOTTOMLEFT", box, "BOTTOMRIGHT", 5, 3)
 
-    local pad, tint, fill = spec.pad, spec.tint, spec.fill
+    local pad, tint, fill = PD.LIST_ROW_PAD, spec.tint, spec.fill
     local view = CreateScrollBoxListLinearView(pad, pad, 2, 2, pad)
-    view:SetElementExtent(spec.rowH)
+    view:SetElementExtent(PD.LIST_ROW_H)
     view:SetElementInitializer("Button", function(row, data)
         if not row.stripe then
             row.stripe = row:CreateTexture(nil, "BACKGROUND")
@@ -298,10 +317,10 @@ end
 -- Returns row[key], creating the FontString on first use.
 -- x: left offset; nextX: x of the next column (nil = last column,
 -- stretches to the row's right edge); r,g,b: optional fixed color.
-function PD:RowLabel(row, key, x, nextX, template, r, g, b)
+function PD:RowLabel(row, key, x, nextX, r, g, b)
     local fs = row[key]
     if not fs then
-        fs = row:CreateFontString(nil, "OVERLAY", template or "GameFontNormal")
+        fs = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         fs:SetPoint("LEFT", row, "LEFT", x, 0)
         if nextX then
             fs:SetWidth(nextX - x - 4)
@@ -330,43 +349,46 @@ function PD:LookupClass(name, realm)
     if h and h.class and h.class ~= "UNKNOWN" then return h.class end
 end
 
--- Row height and spacing of all three list tabs (same look everywhere)
-PD.LIST_ROW_H   = 40
-PD.LIST_ROW_PAD = 2
-
 -- Mood icon at the left edge of a row (created once per pooled row)
-PD.MOOD_ICON_SIZE = PD.LIST_ROW_H - 4
 function PD:SetRowMood(row, mood)
     if not row.moodTex then
         row.moodTex = row:CreateTexture(nil, "ARTWORK")
         row.moodTex:SetPoint("LEFT", row, "LEFT", PD.COL.MOOD, 0)
+        row.moodTex:SetSize(MOOD_ICON_SIZE, MOOD_ICON_SIZE)
     end
-    row.moodTex:SetSize(PD.MOOD_ICON_SIZE, PD.MOOD_ICON_SIZE)
     row.moodTex:SetTexture(PD:GetMood(mood).tex)
 end
 
--- Columns shared by the Dossier and Ignore List rows: mood icon,
--- class-colored name, realm, role (from the group history), since, note.
+-- The first columns of every list row: mood icon, class-colored name,
+-- realm and role letter. e: entry (name, realm); role: LFG role token.
+function PD:FillIdentityCols(row, e, class, mood, role)
+    local COL = PD.COL
+
+    PD:SetRowMood(row, mood)
+
+    local nameLabel = PD:RowLabel(row, "nameLabel", COL.NAME, COL.REALM)
+    PD:ApplyNameColor(nameLabel, class)
+    nameLabel:SetText(e.name or "?")
+
+    PD:RowLabel(row, "realmLabel", COL.REALM, COL.ROLE, 0.78, 0.78, 0.78)
+        :SetText(e.realm or PD.GetMyRealm())
+
+    PD:RowLabel(row, "roleLabel", COL.ROLE, COL.MODE):SetText(PD:GH_RoleText(role))
+end
+
+-- Columns shared by the Dossier and Ignore List rows: the identity columns
+-- (role from the group history), since and note.
 -- e: entry (name, realm); o: { mood, class, ts, note }
 function PD:FillPlayerCols(row, e, o)
     local COL = PD.COL
 
-    PD:SetRowMood(row, o.mood)
-
-    local nameLabel = PD:RowLabel(row, "nameLabel", COL.NAME, COL.REALM)
-    PD:ApplyNameColor(nameLabel, o.class)
-    nameLabel:SetText(e.name or "?")
-
-    PD:RowLabel(row, "realmLabel", COL.REALM, COL.ROLE, nil, 0.78, 0.78, 0.78)
-        :SetText(e.realm or PD.GetMyRealm())
-
     local hEntry = PD:GH_GetEntry(e.name, e.realm)
-    PD:RowLabel(row, "roleLabel", COL.ROLE, COL.SINCE):SetText(PD:GH_RoleText(hEntry and hEntry.role))
+    PD:FillIdentityCols(row, e, o.class, o.mood, hEntry and hEntry.role)
 
-    PD:RowLabel(row, "sinceLabel", COL.SINCE, COL.LAST, nil, 0.78, 0.78, 0.78)
+    PD:RowLabel(row, "sinceLabel", COL.SINCE, COL.LAST, 0.78, 0.78, 0.78)
         :SetText(PD:TimeAgo(o.ts))
 
-    local noteLabel = PD:RowLabel(row, "noteLabel", COL.LAST, nil, nil, 0.60, 0.60, 0.60)
+    local noteLabel = PD:RowLabel(row, "noteLabel", COL.LAST, nil, 0.60, 0.60, 0.60)
     noteLabel:SetWordWrap(false)
     noteLabel:SetText((o.note and o.note ~= "") and o.note or "|cff444444-|r")
 end

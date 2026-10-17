@@ -12,6 +12,9 @@
 - New addon icon and new mood icons (Good, Neutral, Bad).
 - Dossier, Ignore List and History look the same: row height, name font and mood icon size.
 
+### Internal
+- Release check: the three list tabs share their row code and sort getters; unused group-content labels removed (history only stores Mythic+).
+
 ---
 
 ## 1.1.4

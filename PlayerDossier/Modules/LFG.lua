@@ -120,6 +120,10 @@ end
 local lfgFrame = CreateFrame("Frame", "PDLFGEvents")
 lfgFrame:RegisterEvent("LFG_LIST_SEARCH_RESULTS_RECEIVED")
 lfgFrame:RegisterEvent("LFG_LIST_SEARCH_FAILED")
+lfgFrame:SetScript("OnEvent", function()
+    wipe(resultCache)
+    nameIndex = nil
+end)
 
 -- ================================================================
 -- 2.  TOOLTIP
@@ -237,11 +241,6 @@ local function MarkApplicant(member)
     if not text or text == "" or PD.IsSecret(text) then return end
     member.Name:SetText((entry.hasIgnored and "|cffff2e2e!|r" or "|cffff8800!|r") .. text)
 end
-
-lfgFrame:SetScript("OnEvent", function()
-    wipe(resultCache)
-    nameIndex = nil
-end)
 
 -- ================================================================
 -- 4.  HOOKS
