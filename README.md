@@ -78,6 +78,10 @@ The window uses the current Retail frame style (tabs below the window, modern sc
 
 See [CHANGELOG.md](CHANGELOG.md).
 
+## Feedback
+
+Found a bug or have an idea? [Open an issue on GitHub](https://github.com/Nightwalker559/PlayerDossier/issues).
+
 ## License
 
-[MIT with AI restriction](LICENSE.md) © Nightwalker559
+MIT with AI restriction (no use for AI or machine learning), see [LICENSE.md](https://github.com/Nightwalker559/PlayerDossier/blob/main/LICENSE.md).
