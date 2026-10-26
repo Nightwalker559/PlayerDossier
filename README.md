@@ -80,4 +80,4 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-[MIT](LICENSE) © Nightwalker559
+[MIT with AI restriction](LICENSE.md) © Nightwalker559
