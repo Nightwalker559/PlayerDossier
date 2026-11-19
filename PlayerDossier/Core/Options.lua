@@ -18,7 +18,7 @@ local DEFAULTS = {
     lfgInlineWarning  = true,   -- warn in the LFG result list
     syncNativeIgnore  = true,   -- also fill WoW's native ignore list
     trackGroupHistory = true,
-    moodStyle         = "faces",   -- "faces" | "minimal"
+    moodStyle         = "faces",   -- "faces" | "minimal" | "cats" (PD.MOOD_STYLES)
 }
 
 PD:OnInit(function()
@@ -27,8 +27,8 @@ PD:OnInit(function()
         if opt[key] == nil then opt[key] = default end
     end
     PD:ApplyMoodStyle(opt.moodStyle)
-    opt.lfgHideIgnored = nil   -- option was removed in 1.1.0
-    opt.lfgAllowInvite = nil   -- dev-only option, dropped before the 1.1.4 release
+    opt.lfgHideIgnored = nil   -- obsolete option, no longer in the panel
+    opt.lfgAllowInvite = nil   -- obsolete dev-only option
 end)
 
 function PD:OPT_Get(key)
