@@ -1,82 +1,41 @@
 # PlayerDossier
 
-**Track the players you meet, remember what you thought of them, and block the ones you never want to see again — without the 50-slot ignore limit.**
+Track the players you meet, remember what you thought of them, and block the ones you never want to see again, without the 50-slot ignore limit.
 
-PlayerDossier is a player manager for World of Warcraft (Retail, 12.x). It combines a personal notebook for players, an unlimited account-wide ignore list, an automatic group history and Group Finder (LFG) warnings in one window.
+A player manager for World of Warcraft Retail (Midnight, 12.x): a personal notebook, an unlimited account-wide ignore list, an automatic group history and Group Finder warnings in one window. English and German. ElvUI skin supported.
+
+**Author:** Nightwalker559 · **License:** MIT with AI restriction
+
+---
 
 ## Features
 
-### Dossier
-- Add any player with a **note** (up to 60 characters) and a **mood**: Good, Neutral or Bad.
-- Add players via right-click on a unit frame, a chat name, the group frames or the social menus.
-- The list shows mood, class color, server, role, time since you added them and your note. It is sorted by "Since" (newest first) by default; **click a column header** to sort by any column, click again to reverse. Your choice is remembered per tab.
-- Players on your ignore list are hidden here (their entry is kept and returns when you unignore them).
-- **Copy Name-Realm** from the context menu, ready to paste into raider.io or WarcraftLogs.
-- Get a **reunion notice** in chat when a tracked player joins your group.
+- **Dossier:** add any player with a note (up to 60 characters) and a mood (Good, Neutral, Bad) via right-click on a unit frame, chat name, group frames or the social menus. The list shows mood, class color, server, role, time since you added them and your note; click a column header to sort. A **reunion notice** appears in chat when a tracked player joins your group, and **Copy Name-Realm** helps with raider.io or WarcraftLogs.
+- **Ignore list without the limit:** account-wide, with an optional reason per player (the dossier note is prefilled). The 50 most recent entries also go into WoW's native ignore list, everything beyond is blocked silently through a chat filter. Optionally keep the list inside PlayerDossier only. Duels, party, guild and trade requests from ignored players are **declined automatically**, and one click **imports** your existing WoW ignore list.
+- **Group Finder:** groups with an ignored leader or member are marked red "!IGNORED" in the search results, groups with a Bad-mood player orange "!WARNING". Tooltips show which members are ignored (with reason) or in your dossier (with your note), also for applicants and players from other realms, alongside Raider.IO tooltips.
+- **Group history:** logs everyone you group with in Mythic+ (class, role, level, last seen, how often). Right-click an entry to add that player to your Dossier or Ignore List. Capped at 300 entries, can be turned off.
+- **Window:** four tabs (Dossier, Ignore List, History, Options), a minimap button, mood icons as Faces, Subtle or Cats.
 
-### Ignore List — no 50-slot limit
-- Account-wide ignore list with an optional reason per player. Same look as the Dossier (bad-mood icon, class color, role, sortable columns). When you ignore someone from your dossier, their note is prefilled as the reason.
-- The 50 most recent entries are also added to WoW's native ignore list, so every built-in WoW feature respects them. Everything beyond that is blocked silently through a chat filter, which effectively gives you unlimited ignores.
-- Optionally keep the list inside PlayerDossier only and leave WoW's native list untouched ("Use WoW's native ignore list").
-- **Auto-decline** duels, party invites, guild invites and trade requests from ignored players.
-- **Import** your existing WoW ignore list with one click.
-
-### Group Finder (LFG)
-- **Inline warning:** a group whose leader or member is on your ignore list is marked red with "!IGNORED" directly in the search results, no hover needed. Players with a **Bad** mood in your dossier get an orange "!WARNING" instead.
-- **Tooltip:** hover a group to see which of its members are on your ignore list (with the ignore reason) or in your dossier (with your note, bad-mood players highlighted). The same hint shows when you hover an applicant to your own group. Works with players from other realms and alongside Raider.IO tooltips.
-
-### Group History
-- Automatically logs everyone you group with in **Mythic+** (class, role, M+ level, last seen, how often you grouped).
-- Every entry shows a mood icon: neutral by default, your mood for players in the Dossier, the bad mood for ignored players.
-- Right-click an entry to add that player to your Dossier or Ignore List after the fact.
-- Capped at 300 entries; the oldest are trimmed automatically. Can be turned off.
-
-### Everything else
-- Minimap button (no library, drag to move; picked up by button collectors).
-- Built-in **ElvUI skin** support.
-- Localization: English and German.
-
-## Installation
-
-1. Download the latest release.
-2. Place the `PlayerDossier` folder in `World of Warcraft/_retail_/Interface/AddOns/`.
-3. Start the game (or `/reload`).
-
-## Usage
+## Commands
 
 | Command | Action |
 | --- | --- |
-| `/pd` | Open the dossier (Dossier tab) |
+| `/pd` | Open the dossier |
 | `/pd ignore` | Open the Ignore List tab |
 | `/pd minimap` | Toggle the minimap button |
 | `/pd clear` | Delete **all** dossier entries (asks for confirmation) |
-| `/pd help` | Show the command list |
+| `/pd help` | Show the commands |
 
 `/playerdossier` and `/dossier` work as aliases for `/pd`.
 
-The window uses the current Retail frame style (tabs below the window, modern scroll bars, ElvUI skin supported) and has four tabs: **Dossier**, **Ignore List**, **History** and **Options**.
-
-## Options
-
-| Section | Setting |
-| --- | --- |
-| Appearance | Mood icons: Faces, Subtle or Cats |
-| Chat Messages | Reunion and warning messages in chat |
-| Ignore List | Block ignored players in chat · Use WoW's native ignore list · Auto-decline duels and invites · Class colors for names |
-| Group Finder | Inline warning in the group list |
-| Group History | Track group history |
-| Import | Import WoW's native ignore list |
-| Minimap | Show minimap button |
-
 ## Notes
 
-- Auto-decline may not work if another addon accepts invites before PlayerDossier can react.
-- All data is stored account-wide in the `PlayerDossierDB` SavedVariable.
-- Supports WoW 12.x (Midnight) including its Secret Values restrictions: names that can't be read in restricted situations (for example active PvP matches) are skipped instead of causing errors.
+- Auto-decline may not work if another addon accepts invites first.
+- All data is account-wide (`PlayerDossierDB`). Names that cannot be read in restricted situations (e.g. active PvP matches) are skipped instead of causing errors.
 
-## Changelog
+---
 
-See [CHANGELOG.md](CHANGELOG.md).
+See the [changelog](https://github.com/Nightwalker559/PlayerDossier/blob/main/CHANGELOG.md) for the version history.
 
 ## Feedback
 
